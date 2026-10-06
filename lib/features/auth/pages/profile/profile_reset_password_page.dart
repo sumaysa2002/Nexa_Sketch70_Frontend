@@ -254,29 +254,29 @@ class _Profile_Reset_Password_PageState extends State<Profile_Reset_Password_Pag
                           },
                         ),
 
-                        const SizedBox(height: 10),
-
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.of(context).push(Reset_Password_Page.route());
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              'Forgot current password?',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontFamily: 'NotoSansThai',
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ),
+                        // const SizedBox(height: 10),
+                        //
+                        // Align(
+                        //   alignment: Alignment.centerRight,
+                        //   child: TextButton(
+                        //     onPressed: () {
+                        //       Navigator.of(context).push(Reset_Password_Page.route());
+                        //     },
+                        //     style: TextButton.styleFrom(
+                        //       padding: EdgeInsets.zero,
+                        //       minimumSize: Size.zero,
+                        //       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        //     ),
+                        //     child: const Text(
+                        //       'Forgot current password?',
+                        //       style: TextStyle(
+                        //         fontSize: 14,
+                        //         fontFamily: 'NotoSansThai',
+                        //         color: Colors.grey,
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
 
                         SizedBox(height: 50.0),
 
