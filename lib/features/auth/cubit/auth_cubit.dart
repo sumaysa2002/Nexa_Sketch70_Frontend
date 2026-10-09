@@ -1,4 +1,7 @@
-import 'package:offline_gnss69_new/export.dart';
+import 'package:offline_gnss69_new/export.dart' hide safeErrorMessage;
+
+import '../../widgets/otp/app_exception.dart';
+
 part 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
@@ -35,6 +38,19 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  /// ── error จากการยืนยัน OTP → ถ้ามีจำนวนครั้งที่กรอก ให้ emit AuthOtpInvalid ──
+  void _emitOtpError(Object e) {
+    if (e is OtpVerifyException) {
+      emit(AuthOtpInvalid(
+        e.message,
+        attempts: e.attempts,
+        maxAttempts: e.maxAttempts,
+      ));
+    } else {
+      emit(AuthError(safeErrorMessage(e)));
+    }
+  }
+
   /// ── ยืนยัน OTP ──────────────────────────────────────
   void verifyOtp({
     required String otp,
@@ -50,16 +66,26 @@ class AuthCubit extends Cubit<AuthState> {
       );
       emit(AuthSignupSuccess());
     } catch (e) {
-      emit(AuthError(safeErrorMessage(e)));
+      _emitOtpError(e);
     }
   }
 
   /// ── ฟังก์ชันสำหรับส่ง OTP ซ้ำ ──────────────────────────────────────
-  Future<void> resendOtp(String email) async {
+  Future<void> resendOtp(
+      String email, {
+        String purpose = 'signup',
+        String? previousHash,
+      }) async {
     emit(AuthLoading());
     try {
-      final hash = await authRemoteRepository.sendOtp(email: email);
+      final hash = await authRemoteRepository.sendOtp(
+        email: email,
+        purpose: purpose,
+        previousHash: previousHash,
+      );
       emit(AuthResendOtpSuccess(hash: hash));
+    } on OtpRateLimitException catch (e) {
+      emit(AuthOtpRateLimited(e.message, retryAfterSeconds: e.retryAfterSeconds));
     } catch (e) {
       emit(AuthError(safeErrorMessage(e)));
     }
@@ -117,7 +143,7 @@ class AuthCubit extends Cubit<AuthState> {
       // Login สำเร็จ (บันทึกลง SQLite)
       emit(AuthLoggedIn(userModel));
     } catch (e) {
-      emit(AuthError(safeErrorMessage(e)));
+      _emitOtpError(e);
     }
   }
 
@@ -136,7 +162,10 @@ class AuthCubit extends Cubit<AuthState> {
         return;
       }
 
-      final hash = await authRemoteRepository.sendOtp(email: email);
+      final hash = await authRemoteRepository.sendOtp(
+        email: email,
+        purpose: 'reset_password',
+      );
 
       emit(AuthResetPasswordOtpSent(
         email: email,
@@ -165,7 +194,7 @@ class AuthCubit extends Cubit<AuthState> {
       );
       emit(AuthResetPasswordSuccess());
     } catch (e) {
-      emit(AuthError(safeErrorMessage(e)));
+      _emitOtpError(e);
     }
   }
 
@@ -395,3 +424,4 @@ class AuthCubit extends Cubit<AuthState> {
 
 
 }
+

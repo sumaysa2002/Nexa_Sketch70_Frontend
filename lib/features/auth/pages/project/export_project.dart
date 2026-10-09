@@ -1343,7 +1343,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontFamily: 'NotoSansThai')),
-        backgroundColor: Colors.red.shade700,
+        backgroundColor: Colors.grey.shade900,
       ),
     );
   }

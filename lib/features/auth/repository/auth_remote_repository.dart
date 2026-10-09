@@ -1,6 +1,8 @@
 import 'package:http/http.dart' as http;
 
-import 'package:offline_gnss69_new/export.dart';
+import 'package:offline_gnss69_new/export.dart' hide AppException, safeErrorMessage;
+
+import '../../widgets/otp/app_exception.dart';
 
 class AuthRemoteRepository {
   final spService = SpService();
@@ -32,21 +34,66 @@ class AuthRemoteRepository {
   }
 
   /// ── ส่งรหัส OTP ไปยัง email ──────────────────────────────────────
-  Future<String> sendOtp({required String email}) async {
+  /// purpose: 'signup' | 'login' | 'reset_password'
+  /// previousHash: ต้องส่งเมื่อ purpose = 'login' (ขอ OTP Login ใหม่)
+  Future<String> sendOtp({
+    required String email,
+    String purpose = 'signup',
+    String? previousHash,
+  }) async {
+    String path;
+    if (purpose == 'login') {
+      path = '/auth/login/resend_otp';
+    } else if (purpose == 'reset_password') {
+      path = '/auth/login/reset_password/send_otp';
+    } else {
+      path = '/auth/signup/send_otp';
+    }
+
     final res = await http.post(
-      Uri.parse('${Constants.backendUri}/auth/signup/send_otp'),
+      Uri.parse('${Constants.backendUri}$path'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: jsonEncode({'email': email}),
+      body: jsonEncode({
+        'email': email,
+        if (previousHash != null) 'hash': previousHash,
+      }),
     );
 
     final data = jsonDecode(res.body);
     if (res.statusCode == 200) {
       return data['hash'];
     }
+
+    // ครบโควตา / ขอถี่เกินไป → แนบเวลาที่ต้องรอ ให้หน้า OTP ล็อกปุ่ม Resend
+    final retryAfter = data['retry_after_seconds'];
+    if (res.statusCode == 429 && retryAfter is int) {
+      throw OtpRateLimitException(
+        data['message'] ?? 'ขอรหัส OTP บ่อยเกินไป',
+        retryAfterSeconds: retryAfter,
+      );
+    }
     throw data['message'] ?? 'ส่ง OTP ไม่สำเร็จ';
+  }
+
+  /// ── แปลง response ที่ยืนยัน OTP ไม่ผ่าน → OtpVerifyException (มีจำนวนครั้งที่กรอกไปแล้ว) ──
+  Never _throwOtpFailure(http.Response res, String fallback) {
+    Map<String, dynamic>? data;
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) data = decoded;
+    } catch (_) {}
+
+    final message = (data?['message'] as String?) ?? fallback;
+    final attempts = data?['attempts'];
+    final maxAttempts = data?['max_attempts'];
+
+    if (attempts is int && maxAttempts is int) {
+      throw OtpVerifyException(message, attempts: attempts, maxAttempts: maxAttempts);
+    }
+    throw message;
   }
 
   /// ── ตรวจสอบ OTP และ insert user เข้าฐานข้อมูล ──────────────────────────────────────
@@ -82,9 +129,10 @@ class AuthRemoteRepository {
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode != 201) {
-        final errorData = jsonDecode(response.body);
-        throw errorData['message'] ?? 'สมัครสมาชิกไม่สำเร็จ';
+        _throwOtpFailure(response, 'สมัครสมาชิกไม่สำเร็จ');
       }
+    } on OtpVerifyException {
+      rethrow; // ส่งต่อให้ cubit ใช้จำนวนครั้งที่กรอก
     } catch (e) {
       throw AppException(safeErrorMessage(e, fallback: 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), e);
     }
@@ -133,7 +181,7 @@ class AuthRemoteRepository {
     );
 
     if (res.statusCode != 200) {
-      throw jsonDecode(res.body)['message'] ?? 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ';
+      _throwOtpFailure(res, 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ');
     }
     return UserModel.fromJson(res.body);
   }
@@ -157,8 +205,7 @@ class AuthRemoteRepository {
     );
 
     if (res.statusCode != 200) {
-      final data = jsonDecode(res.body);
-      throw data['message'] ?? 'เปลี่ยนรหัสผ่านไม่สำเร็จ';
+      _throwOtpFailure(res, 'เปลี่ยนรหัสผ่านไม่สำเร็จ');
     }
   }
 

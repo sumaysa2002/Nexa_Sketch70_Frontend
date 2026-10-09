@@ -487,7 +487,7 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(state.error),
-                backgroundColor: Colors.red
+                backgroundColor: Colors.grey.shade900
             ),
           );
         }

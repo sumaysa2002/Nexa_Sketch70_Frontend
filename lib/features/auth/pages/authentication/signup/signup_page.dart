@@ -255,7 +255,7 @@ class _SignupPageState extends State<SignupPage> {
                             if (state is AuthError) {
                               context.showSnackBar(
                                 message: state.error,
-                                backgroundColor: Colors.red,
+                                backgroundColor: Colors.grey.shade900,
                               );
                             }
 

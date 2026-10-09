@@ -132,6 +132,9 @@ export 'package:offline_gnss69_new/features/widgets/draw/icon_popup.dart';
 export 'package:offline_gnss69_new/features/widgets/draw/shape_triangle_square.dart';
 export 'package:offline_gnss69_new/features/widgets/draw/transformlayer.dart';
 
+export 'package:offline_gnss69_new/features/widgets/otp/otp_status_panel.dart';
+//export 'package:offline_gnss69_new/features/widgets/otp/app_exception.dart';
+
 export 'package:offline_gnss69_new/features/widgets/dropdown/dropdown_field_c5.dart';
 export 'package:offline_gnss69_new/features/widgets/dropdown/point_dropdown_field_column_c30.dart';
 export 'package:offline_gnss69_new/features/widgets/dropdown/point_dropdown_field_row_c30.dart';

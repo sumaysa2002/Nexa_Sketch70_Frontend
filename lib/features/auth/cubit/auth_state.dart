@@ -11,6 +11,21 @@ final class AuthError extends AuthState {
   AuthError(this.error);
 }
 
+/// ขอ OTP ไม่ได้เพราะครบโควตา → หน้า OTP ล็อกปุ่ม Resend ตามเวลาที่ต้องรอ
+final class AuthOtpRateLimited extends AuthError {
+  final int retryAfterSeconds;
+  AuthOtpRateLimited(super.error, {required this.retryAfterSeconds});
+}
+
+/// ยืนยัน OTP ไม่ผ่าน (มีจำนวนครั้งที่กรอกไปแล้ว)
+final class AuthOtpInvalid extends AuthError {
+  final int attempts;
+  final int maxAttempts;
+  AuthOtpInvalid(super.error, {required this.attempts, required this.maxAttempts});
+
+  bool get isLocked => attempts >= maxAttempts;
+}
+
 /* ============================================================
     1) SIGNUP
 ============================================================ */

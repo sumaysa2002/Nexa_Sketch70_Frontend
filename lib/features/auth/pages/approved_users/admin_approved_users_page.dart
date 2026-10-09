@@ -170,7 +170,7 @@ class _Admin_Approved_Users_PageState extends State<Admin_Approved_Users_Page> {
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: Colors.grey.shade900),
     );
   }
 
@@ -872,7 +872,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(body['error'] ?? 'อนุมัติสมาชิกไม่สำเร็จ'),
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.grey.shade900,
             ),
           );
         }
@@ -881,7 +881,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
       setState(() => _addingId = null);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.grey.shade900),
         );
       }
     }

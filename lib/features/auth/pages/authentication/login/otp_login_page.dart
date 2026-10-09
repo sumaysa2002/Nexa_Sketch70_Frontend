@@ -9,7 +9,7 @@ class OtpLoginPage extends StatefulWidget {
     required String hash,
   }) =>
       MaterialPageRoute(
-        builder: (_) => OtpLoginPage(tempUser: tempUser, hash: hash)
+          builder: (_) => OtpLoginPage(tempUser: tempUser, hash: hash)
       );
 
   const OtpLoginPage({
@@ -28,15 +28,21 @@ class _OtpLoginPageState extends State<OtpLoginPage> {
 
   // ตัวแปรสำหรับนับเวลาถอยหลัง
   late String _currentHash;
+
+  // จำนวนครั้งที่กรอก OTP ไปแล้ว (ค่าจาก backend)
+  int _attempts = 0;
+  int _maxAttempts = 5;
+  bool get _isLocked => _attempts >= _maxAttempts;
   Timer? _timer;
   int _start = 60; // 60 วินาที
   bool _canResend = false;
 
 
   /// ── นับถอยหลัง OTP ──────────────────────
-  void startTimer() {
+  /// seconds = เวลาที่ต้องรอก่อนกด Resend ได้ (ปกติ 60 วิ / ถ้าครบโควตาใช้ค่าจาก backend)
+  void startTimer([int seconds = 60]) {
     _canResend = false;
-    _start = 60;
+    _start = seconds;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_start == 0) {
@@ -62,14 +68,14 @@ class _OtpLoginPageState extends State<OtpLoginPage> {
   /// ── Resend OTP ──────────────────────
   void _handleResend() {
     if (_canResend) {
+      // ปุ่มถูกปิดระหว่าง AuthLoading อยู่แล้ว → รอผลจาก backend:
+      // สำเร็จ → นับ 60 วิ / ครบโควตา → นับตามเวลาที่ต้องรอ (ดูใน listener)
 
-      context.read<AuthCubit>().resendOtp(widget.tempUser.email);
-
-      context.showSnackBar(
-        message: 'ส่งรหัส OTP ใหม่สำเร็จ',
-        backgroundColor: Colors.grey[900]!,
+      context.read<AuthCubit>().resendOtp(
+        widget.tempUser.email,
+        purpose: 'login',
+        previousHash: _currentHash,
       );
-      startTimer(); // เริ่มนับถอยหลังใหม่
     }
   }
 
@@ -121,42 +127,61 @@ class _OtpLoginPageState extends State<OtpLoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: BlocConsumer<AuthCubit, AuthState>(
-          listener: (context, state) {
-            if (state is AuthError) {
-              context.showSnackBar(
-                message: state.error,
-                backgroundColor: Colors.red,
+        listener: (context, state) {
+          /// ยืนยัน OTP ไม่ผ่าน → อัปเดตจำนวนครั้งที่กรอก
+          if (state is AuthOtpInvalid) {
+            setState(() {
+              _attempts = state.attempts;
+              _maxAttempts = state.maxAttempts;
+            });
+          }
+
+          if (state is AuthError) {
+            context.showSnackBar(
+              message: state.error,
+              backgroundColor: Colors.grey.shade900,
+            );
+            _otpController.clear();  // เคลียร์รหัสถ้ากรอกผิด
+          }
+
+          /// Resend OTP
+          /// ขอ OTP ครบโควตา → ล็อกปุ่ม Resend จนกว่าจะพ้นเวลาที่ backend กำหนด
+          if (state is AuthOtpRateLimited) {
+            startTimer(state.retryAfterSeconds);
+          }
+
+          if (state is AuthResendOtpSuccess) {
+            setState(() {
+              _currentHash = state.hash;
+              _attempts = 0; // รหัสรอบใหม่ เริ่มนับใหม่
+            });
+            context.showSnackBar(
+              message: 'ส่งรหัส OTP ใหม่สำเร็จ',
+              backgroundColor: Colors.grey.shade900,
+            );
+            startTimer(); // ขอรหัสใหม่ได้อีกครั้งหลัง 60 วิ
+          }
+
+          /// ไปหน้า home แยกตาม status user
+          if (state is AuthLoggedIn) {
+
+            final userStatus = state.userModel.status;
+
+            if (userStatus == 'admin') {
+              Navigator.of(context).pushAndRemoveUntil(
+                AdminMainWrapper.route(), (route) => false,
               );
-              _otpController.clear();  // เคลียร์รหัสถ้ากรอกผิด
+            } else if (userStatus == 'user') {
+              Navigator.of(context).pushAndRemoveUntil(
+                UserMainWrapper.route(), (route) => false,
+              );
+            } else {
+              Navigator.of(context).pushAndRemoveUntil(
+                NullUserMainWrapper.route(), (route) => false,
+              );
             }
-
-            /// Resend OTP
-            if (state is AuthResendOtpSuccess) {
-              setState(() {
-                _currentHash = state.hash;
-              });
-            }
-
-            /// ไปหน้า home แยกตาม status user
-            if (state is AuthLoggedIn) {
-
-              final userStatus = state.userModel.status;
-
-              if (userStatus == 'admin') {
-                Navigator.of(context).pushAndRemoveUntil(
-                  AdminMainWrapper.route(), (route) => false,
-                );
-              } else if (userStatus == 'user') {
-                Navigator.of(context).pushAndRemoveUntil(
-                  UserMainWrapper.route(), (route) => false,
-                );
-              } else {
-                Navigator.of(context).pushAndRemoveUntil(
-                  NullUserMainWrapper.route(), (route) => false,
-                );
-              }
-            }
-          },
+          }
+        },
 
         builder: (context, state) {
           return Stack(
@@ -203,14 +228,24 @@ class _OtpLoginPageState extends State<OtpLoginPage> {
 
                         // แสดงเวลานับถอยหลัง
                         Text(
-                          "Code expires in: $timerText",
+                          "Resend available in: $timerText",
                           style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                         ),
 
                         const SizedBox(height: 30),
 
                         /// ช่องกรอก OTP (6 ช่อง)
+                        /// Ref ของ OTP รอบนี้ + จำนวนครั้งที่กรอก
+                        OtpStatusPanel(
+                          hash: _currentHash,
+                          attempts: _attempts,
+                          maxAttempts: _maxAttempts,
+                        ),
+
+                        const SizedBox(height: 20),
+
                         Pinput(
+                          enabled: !_isLocked, // กรอกผิดครบแล้ว ล็อกช่องจนกว่าจะขอรหัสใหม่
                           controller: _otpController,
                           length: 6,
                           keyboardType: TextInputType.number,
@@ -243,7 +278,7 @@ class _OtpLoginPageState extends State<OtpLoginPage> {
                                 TextSpan(
                                   text: _canResend
                                       ? 'Resend OTP'
-                                      : 'Wait ${_start}s',
+                                      : 'Wait $timerText',
                                   style: TextStyle(
                                     color: (state is AuthLoading)
                                         ? Colors.grey
@@ -278,5 +313,3 @@ class _OtpLoginPageState extends State<OtpLoginPage> {
   }
 
 }
-
-
