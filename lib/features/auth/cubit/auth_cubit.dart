@@ -11,6 +11,18 @@ class AuthCubit extends Cubit<AuthState> {
   final authLocalRepository = AuthLocalRepository();
   final spService = SpService(); // จดจำผู้ใช้
 
+  /// ── ส่ง token ให้ SecureImage ทุกครั้งที่สถานะ login เปลี่ยน ──────────
+  @override
+  void onChange(Change<AuthState> change) {
+    super.onChange(change);
+    final next = change.nextState;
+    if (next is AuthLoggedIn) {
+      SecureImage.setToken(next.userModel.token);
+    } else if (next is AuthInitial) {
+      SecureImage.setToken(null); // logout / token หมดอายุ
+    }
+  }
+
 
   /* ============================================================
     1) SIGNUP
@@ -424,4 +436,3 @@ class AuthCubit extends Cubit<AuthState> {
 
 
 }
-

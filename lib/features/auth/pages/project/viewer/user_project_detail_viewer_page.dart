@@ -326,8 +326,8 @@ class _User_Project_Detail_Viewer_PageState extends State<User_Project_Detail_Vi
 
                   // download project
                   circle_icon_button(
-                      icon: Icons.save_alt,
-                      onTap: _onExportTap,
+                    icon: Icons.save_alt,
+                    onTap: _onExportTap,
                   ),
 
                 ],
@@ -922,8 +922,7 @@ class _ProfileAvatar extends StatelessWidget {
       radius: radius,
       backgroundColor: Colors.grey.shade200,
       backgroundImage: canLoad
-          ? NetworkImage(
-          '${Constants.backendUri}/uploads/profiles/$profileImg')
+          ? NetworkImage(SecureImage.profileUrl(profileImg), headers: SecureImage.authHeaders)
           : null,
       child: !canLoad
           ? Icon(Icons.person,
@@ -932,7 +931,3 @@ class _ProfileAvatar extends StatelessWidget {
     );
   }
 }
-
-
-
-

@@ -32,7 +32,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
   // รูป signature
   String? _sigUrl(String? filename) {
     if (filename == null) return null;
-    return '${Constants.backendUri}/uploads/signatures/$filename';
+    return SecureImage.signatureUrl(filename);
   }
 
   UserModel? _technician;
@@ -140,7 +140,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
         backgroundColor: const Color(0xFFFAFAFA),
         body: Column(
           children: [
-      
+
             /// Header
             Container(
               height: 180,
@@ -162,7 +162,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
               child: SafeArea(
                 child: Stack(
                   children: [
-      
+
                     /// ปิด x
                     Positioned(
                       top: 10,
@@ -183,20 +183,20 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                         ),
                       ),
                     ),
-      
+
                     Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-      
+
                           const Icon(
                             Icons.location_on,
                             color: Colors.red,
                             size: 26,
                           ),
-      
+
                           SizedBox(height: 6),
-      
+
                           Text(
                             widget.point.pointName,
                             style: const TextStyle(
@@ -207,15 +207,15 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                               letterSpacing: 1,
                             ),
                           ),
-      
+
                           SizedBox(height: 4),
-      
+
                           w_text_thai_notosansthai(
                               name: 'หมุดรังวัด',
                               font_Size: 14,
                               color: Colors.white70
                           ),
-      
+
                         ],
                       ),
                     ),
@@ -223,9 +223,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                 ),
               ),
             ),
-      
+
             SizedBox(height: 5),
-      
+
             /// Body
             Expanded(
               child: SingleChildScrollView(
@@ -233,11 +233,11 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-      
+
                     Point_Title(title: 'รูปแสดงบริเวณหมุดรังวัด'),
-      
+
                     SizedBox(height: 15),
-      
+
                     /// รูปแสดงบริเวณหมุดรังวัด
                     Row(
                       children: [
@@ -249,9 +249,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                             pointId: widget.point.id,
                           ),
                         ),
-      
+
                         SizedBox(width: 10),
-      
+
                         Expanded(
                           child: _ImgBox(
                             label: 'Zoom Out',
@@ -262,13 +262,13 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                         ),
                       ],
                     ),
-      
+
                     SizedBox(height: 25),
-      
+
                     Point_Title(title: 'ข้อมูล UTM'),
-      
+
                     SizedBox(height: 12),
-      
+
                     /// UTM
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -285,7 +285,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                       ),
                       child: Column(
                         children: [
-      
+
                           Row(
                             children: [
                               Expanded(
@@ -296,9 +296,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                                   value: '${_d(widget.point.northing)} m.',
                                 ),
                               ),
-      
+
                               SizedBox(width: 10),
-      
+
                               Expanded(
                                 child: icon_Item(
                                   icon: Icons.settings_input_antenna,
@@ -309,9 +309,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                               ),
                             ],
                           ),
-      
+
                           const Divider(height: 20),
-      
+
                           Row(
                             children: [
                               Expanded(
@@ -322,9 +322,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                                   value: '${_d(widget.point.easting)} m.',
                                 ),
                               ),
-      
+
                               SizedBox(width: 10),
-      
+
                               Expanded(
                                 child: icon_Item(
                                   icon: Icons.public,
@@ -335,9 +335,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                               ),
                             ],
                           ),
-      
+
                           const Divider(height: 20),
-      
+
                           Row(
                             children: [
                               Expanded(
@@ -348,9 +348,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                                   value: '${_d(widget.point.heightM)} m.',
                                 ),
                               ),
-      
+
                               SizedBox(width: 10),
-      
+
                               Expanded(
                                 child: icon_Item(
                                   icon: Icons.grid_view,
@@ -361,9 +361,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                               ),
                             ],
                           ),
-      
+
                           const Divider(height: 20),
-      
+
                           Row(
                             children: [
                               Expanded(
@@ -374,9 +374,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                                   value: '${_d(widget.point.ellipsoidalM)} m.',
                                 ),
                               ),
-      
+
                               SizedBox(width: 10),
-      
+
                               Expanded(
                                 child: icon_Item(
                                   icon: Icons.description,
@@ -388,25 +388,25 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                             ],
                           ),
                         ],
-      
+
                       ),
                     ),
-      
+
                     SizedBox(height: 20),
-      
+
                     /// DOP , วิธีการรังวัด
                     Row(
                       children: [
-      
+
                         /// DOP
                         Expanded(
                           child: Column(
                             children: [
-      
+
                               Point_Title(title: 'ค่า DOP'),
-      
+
                               SizedBox(height: 12),
-      
+
                               Container(
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
@@ -422,31 +422,31 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                                 ),
                                 child: Column(
                                   children: [
-      
+
                                     _Row(label: 'GDOP', value: '${_d(widget.point.gdopM)} m.'),
                                     _Row(label: 'PDOP', value: '${_d(widget.point.pdopM)} m.'),
                                     _Row(label: 'HDOP', value: '${_d(widget.point.hdopM)} m.'),
                                     _Row(label: '3DCQ', value: '${_d(widget.point.dcqM)} m.'),
-      
+
                                   ],
-      
+
                                 ),
                               ),
                             ],
                           ),
                         ),
-      
+
                         SizedBox(width: 10),
-      
+
                         /// วิธีการรังวัด
                         Expanded(
                           child: Column(
                             children: [
-      
+
                               Point_Title(title: 'วิธีการรังวัด'),
-      
+
                               SizedBox(height: 12),
-      
+
                               Container(
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
@@ -462,40 +462,40 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                                 ),
                                 child: Column(
                                   children: [
-      
+
                                     icon_Item(
                                       icon: Icons.satellite_alt,
                                       color: Colors.indigoAccent,
                                       label: 'วิธีการรังวัดหลัก',
                                       value: '${_d(widget.point.surveyMain)}',
                                     ),
-      
+
                                     const Divider(height: 20),
-      
+
                                     icon_Item(
                                       icon: Icons.architecture,
                                       color: Colors.indigoAccent,
                                       label: 'วิธีการรังวัดย่อย',
                                       value: '${_d(widget.point.surveySub)}',
                                     ),
-      
+
                                   ],
-      
+
                                 ),
                               ),
                             ],
                           ),
                         ),
-      
+
                       ],
                     ),
-      
+
                     SizedBox(height: 20),
-      
+
                     Point_Title(title: 'ที่ตั้ง'),
-      
+
                     SizedBox(height: 12),
-      
+
                     /// ที่ตั้ง
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -512,18 +512,18 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                       ),
                       child: Column(
                         children: [
-      
+
                           _Row(label: 'ตำบล',    value: _d(widget.point.tambon)),
                           _Row(label: 'อำเภอ',   value: _d(widget.point.amphoe)),
                           _Row(label: 'จังหวัด', value: _d(widget.point.province)),
-      
+
                         ],
-      
+
                       ),
                     ),
-      
+
                     SizedBox(height: 12),
-      
+
                     /// วันที่สำรวจ
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -540,7 +540,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                       ),
                       child: Column(
                           children: [
-      
+
                             icon_Item(
                               icon: Icons.calendar_month,
                               color: Colors.red,
@@ -548,16 +548,16 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                               value: '${_d(widget.point.pointDate)}',
                             ),
                           ]
-      
+
                       ),
                     ),
-      
+
                     SizedBox(height: 20),
-      
+
                     Point_Title(title: 'รูปวาดภาคสนาม'),
-      
+
                     SizedBox(height: 12),
-      
+
                     /// รูปวาดภาคสนาม
                     _ImgBox(
                       rawValue: widget.point.drawImg,
@@ -571,7 +571,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                     Point_Title(title: 'JOB'),
 
                     SizedBox(height: 12),
-      
+
                     /// JOB
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -588,7 +588,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                       ),
                       child: Column(
                           children: [
-      
+
                             Row(
                               children: [
                                 Expanded(
@@ -599,9 +599,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                                     value: '${_d(widget.point.job)}',
                                   ),
                                 ),
-      
+
                                 SizedBox(width: 12),
-      
+
                                 Expanded(
                                   child: icon_Item(
                                     icon: Icons.settings_input_antenna,
@@ -612,55 +612,55 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                                 ),
                               ],
                             ),
-      
+
                             const Divider(height: 20),
-      
+
                             Row(
                               children: [
                                 Expanded(
                                   child: Column(
                                     children: [
-      
+
                                       _Row(width: 130, label: 'RF1', value: _d(widget.point.rf1)),
                                       _Row(width: 130, label: 'ระยะ RF1', value: _d(widget.point.distanceM1), unit: 'm.'),
                                       _Row(width: 130, label: 'AZ RF1', value: _d(widget.point.az1),        unit: '°'),
-      
+
                                     ],
                                   ),
                                 ),
-      
+
                                 Container(
                                   width: 1,
                                   height: 100,
                                   margin: const EdgeInsets.symmetric(horizontal: 12),
                                   color: Colors.grey.shade400,
                                 ),
-      
+
                                 Expanded(
                                   child: Column(
                                     children: [
-      
+
                                       _Row(width: 130, label: 'RF2', value: _d(widget.point.rf2)),
                                       _Row(width: 130, label: 'ระยะ RF2', value: _d(widget.point.distanceM2), unit: 'm.'),
                                       _Row(width: 130, label: 'AZ RF2', value: _d(widget.point.az2),        unit: '°'),
-      
+
                                     ],
                                   ),
                                 )
                               ],
                             )
-      
+
                           ]
-      
+
                       ),
                     ),
-      
+
                     SizedBox(height: 20),
-      
+
                     Point_Title(title: 'รูปถ่ายประกอบจุดตรวจสอบ'),
-      
+
                     SizedBox(height: 12),
-      
+
                     /// รูปถ่ายประกอบจุดตรวจสอบ
                     GridView.count(
                       padding: EdgeInsets.zero,
@@ -716,13 +716,13 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
 
                       ],
                     ),
-      
+
                     SizedBox(height: 10),
-      
+
                     Point_Title(title: 'รายละเอียดเพิ่มเติม'),
-      
+
                     SizedBox(height: 12),
-      
+
                     /// รายละเอียดเพิ่มเติม
                     _ImgBox(
                       rawValue: widget.point.detailsImg,
@@ -730,7 +730,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                       pointId: widget.point.id,
                       aspectRatio: 650 /650,
                     ),
-      
+
                     SizedBox(height: 20),
 
                     /// รายละเอียดเพิ่มเติม
@@ -796,18 +796,18 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                     ),
 
                     SizedBox(height: 20),
-      
+
                     const Divider(height: 20),
-      
+
                     SizedBox(height: 20),
-      
+
                     /// ผู้รังวัด , ผู้ตรวจสอบ
                     !_usersLoaded
                         ? const Center(child: CircularProgressIndicator(color: Color(0xFF18181C)))
                         : Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        
+
                         Expanded(
                           child: _UserSignatureBox(
                             role: 'ผู้รังวัด',
@@ -815,9 +815,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                             sigUrl: _sigUrl(_technician?.signature),
                           ),
                         ),
-                        
+
                         SizedBox(width: 16),
-                        
+
                         Expanded(
                           child: _UserSignatureBox(
                             role: 'ผู้ตรวจสอบ',
@@ -825,18 +825,18 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                             sigUrl: _sigUrl(_qc?.signature),
                           ),
                         ),
-                        
+
                       ],
                     ),
-      
+
                     const SizedBox(height: 30),
-      
+
                   ],
                 ),
               ),
             ),
-      
-      
+
+
             /// Button
             SizedBox(
               height: 130,
@@ -860,7 +860,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-      
+
                     SizedBox(
                       width: MediaQuery.of(context).size.width / 2.5,
                       child: button_icon(
@@ -876,9 +876,9 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                         },
                       ),
                     ),
-      
+
                     SizedBox(width: 10.0),
-      
+
                     /// ปุ่ม Delete
                     SizedBox(
                       width: MediaQuery.of(context).size.width / 2.5,
@@ -911,13 +911,13 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
                         },
                       ),
                     ),
-      
+
                   ],
-      
+
                 ),
               ),
             ),
-      
+
           ],
         ),
       ),
@@ -1067,7 +1067,7 @@ class _ImgBox extends StatelessWidget {
   String get _localPath => rawValue!.replaceFirst('local://', '');
 
   String get _networkUrl =>
-      '${Constants.backendUri}/uploads/point/$projectId/$pointId/$rawValue';
+      SecureImage.pointUrl(projectId, pointId, rawValue!);
 
   @override
   Widget build(BuildContext context) {
@@ -1084,7 +1084,7 @@ class _ImgBox extends StatelessWidget {
                 child: InteractiveViewer(
                   child: _isLocal
                       ? Image.file(File(_localPath), fit: BoxFit.contain)
-                      : Image.network(_networkUrl, fit: BoxFit.contain),
+                      : Image.network(_networkUrl, headers: SecureImage.headers(context), fit: BoxFit.contain),
                 ),
               ),
               Positioned(
@@ -1169,6 +1169,7 @@ class _ImgBox extends StatelessWidget {
                 )
                     : Image.network(
                   _networkUrl,
+                  headers: SecureImage.headers(context),
                   fit: BoxFit.cover,
                   loadingBuilder: (_, child, progress) {
                     if (progress == null) return child;
@@ -1266,6 +1267,7 @@ class _UserSignatureBox extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
                   sigUrl!,
+                  headers: SecureImage.headers(context),
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Center(
                     child: Icon(Icons.draw_outlined, color: Colors.grey, size: 28),

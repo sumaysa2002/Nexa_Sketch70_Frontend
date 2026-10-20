@@ -446,8 +446,7 @@ class _MemberCard extends StatelessWidget {
       radius: radius,
       backgroundColor: Colors.grey.shade200,
       backgroundImage: member.profileImg != null
-          ? NetworkImage(
-          '${Constants.backendUri}/uploads/profiles/${member.profileImg}')
+          ? NetworkImage(SecureImage.profileUrl(member.profileImg), headers: SecureImage.authHeaders)
           : null,
       child: member.profileImg == null
           ? Icon(Icons.person, size: radius * 1.1, color: Colors.grey)

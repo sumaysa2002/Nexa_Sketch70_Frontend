@@ -2628,7 +2628,7 @@ class _Note_CreateNewPointState extends State<Note_CreateNewPoint> {
 
       if (boundary == null) return null;
 
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
 
       final ByteData? byteData =
       await image.toByteData(format: ui.ImageByteFormat.png);

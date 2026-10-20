@@ -310,8 +310,7 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
                   backgroundColor: const Color(0xFF18181C),
                   avatar: CircleAvatar(
                     backgroundImage: member.profileImg != null
-                        ? NetworkImage(
-                        "${Constants.backendUri}/uploads/profiles/${member.profileImg}")
+                        ? NetworkImage(SecureImage.profileUrl(member.profileImg), headers: SecureImage.authHeaders)
                         : null,
                     backgroundColor: Colors.grey.shade300,
                     child: member.profileImg == null
@@ -1078,7 +1077,7 @@ class _UserTile extends StatelessWidget {
               radius: 26,
               backgroundColor: Colors.grey.shade200,
               backgroundImage: user.profileImg != null
-                  ? NetworkImage("${Constants.backendUri}/uploads/profiles/${user.profileImg}")
+                  ? NetworkImage(SecureImage.profileUrl(user.profileImg), headers: SecureImage.authHeaders)
                   : null,
               child: user.profileImg == null ? const Icon(Icons.person, size: 28, color: Colors.grey) : null,
             ),

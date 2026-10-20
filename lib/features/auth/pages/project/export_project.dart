@@ -44,13 +44,13 @@ class Export_Project {
   /// ── URL point ──────────────────────────────────────────
   static String _imgUrl(PointModel p, String? filename) {
     if (filename == null || filename.trim().isEmpty) return '';
-    return '${Constants.backendUri}/uploads/point/${p.projectId}/${p.id}/$filename';
+    return SecureImage.pointUrl(p.projectId, p.id, filename);
   }
 
   /// ── URL signature ────────────────────────────────────────
   static String? _sigUrl(String? filename) {
     if (filename == null || filename.trim().isEmpty) return null;
-    return '${Constants.backendUri}/uploads/signatures/$filename';
+    return SecureImage.signatureUrl(filename);
   }
 
   /// ── โหลดข้อมูล user จาก id  ─────────────────────────────────
@@ -1081,26 +1081,26 @@ class Export_Project {
           pw.SizedBox(height: 4),
 
           pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            children: [
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
 
-              // หัวข้อบทบาท
-              pw.Text(
-                role,
-                style: pw.TextStyle(font: ttfBold, fontSize: 14),
-                textAlign: pw.TextAlign.center,
-              ),
+                // หัวข้อบทบาท
+                pw.Text(
+                  role,
+                  style: pw.TextStyle(font: ttfBold, fontSize: 14),
+                  textAlign: pw.TextAlign.center,
+                ),
 
-              pw.SizedBox(width: 7),
+                pw.SizedBox(width: 7),
 
-              // ชื่อ
-              pw.Text(
-                fullName,
-                style: pw.TextStyle(font: ttfBold, fontSize: 13),
-                textAlign: pw.TextAlign.center,
-              ),
+                // ชื่อ
+                pw.Text(
+                  fullName,
+                  style: pw.TextStyle(font: ttfBold, fontSize: 13),
+                  textAlign: pw.TextAlign.center,
+                ),
 
-            ]
+              ]
           ),
 
           pw.SizedBox(height: 2),

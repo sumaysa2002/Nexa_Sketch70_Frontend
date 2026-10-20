@@ -100,8 +100,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
   // URL รูปเดิมจาก server
   String? _imgUrl(String? filename) {
     if (filename == null) return null;
-    return '${Constants.backendUri}/uploads/point'
-        '/${widget.point.projectId}/${widget.point.id}/$filename';
+    return SecureImage.pointUrl(widget.point.projectId, widget.point.id, filename);
   }
 
   @override
@@ -248,7 +247,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
       final url = _imgUrl(value);
       if (url == null) return null;
       try {
-        final res = await http.get(Uri.parse(url));
+        final res = await http.get(Uri.parse(url), headers: SecureImage.headers(context));
         if (res.statusCode == 200) return res.bodyBytes;
       } catch (_) {}
       return null;
@@ -321,6 +320,8 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
       sourcePath: file.path,
       aspectRatio: CropAspectRatio(ratioX: ratioX, ratioY: ratioY),
       compressQuality: 85,
+      maxWidth: 2048,
+      maxHeight: 2048,
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: title,
@@ -378,6 +379,8 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
                   sourcePath: f.path,
                   aspectRatio: CropAspectRatio(ratioX: ratioX, ratioY: ratioY),
                   compressQuality: 85,
+                  maxWidth: 2048,
+                  maxHeight: 2048,
                   uiSettings: [
                     AndroidUiSettings(
                       toolbarTitle: title, toolbarColor: const Color(0xFF18181C),
@@ -904,6 +907,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
                       : hasServer
                       ? Image.network(
                     serverUrl,
+                    headers: SecureImage.headers(context),
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => _placeholderBox(),
                   )
@@ -1087,351 +1091,323 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
                         child: Form(
                           key: formKey,
                           child: SingleChildScrollView(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.fromLTRB(50, 0, 50, 20),
-                            child: Column(
-                              children: [
+                              controller: _scrollController,
+                              padding: const EdgeInsets.fromLTRB(50, 0, 50, 20),
+                              child: Column(
+                                children: [
 
-                                /// ชื่อหมุดรังวัด
-                                point_text_field_column_c5_edit(
-                                  key: _pointNameSectionKey,
-                                  name: 'ชื่อหมุดรังวัด',
-                                  controller: point_name_Controller,
-                                  hintText: '-',
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'กรุณาระบุชื่อหมุดรังวัด';
-                                    }
-                                    return null;
-                                  },
-                                ),
-
-                                SizedBox(height: 5),
-
-                                Point_Title(title: 'รูปแสดงบริเวณหมุดรังวัด'),
-
-                                SizedBox(height: 10),
-
-                                /// รูปแสดงบริเวณหมุดรังวัด
-                                Row(
-                                  children: [
-
-                                    Expanded(
-                                      child: _PhotoBox(
-                                        label: 'Zoom In',
-                                        fieldKey: 'point_zoomin_img',
-                                        newBytes: point_zoomin_img,
-                                        serverFilename: widget.point.pointZoominImg,
-                                        onTap: () => _showSourcePicker(
-                                          title: 'รูปแสดงบริเวณหมุดรังวัด zoom in',
-                                          ratioX: 16,
-                                          ratioY: 9,
-                                          onPicked: (b) => setState(() {
-                                            point_zoomin_img = b;
-                                            _removedImageFields.remove('point_zoomin_img');
-                                          }),
-                                        ),
-                                        onDeleteNew: () => setState(() => point_zoomin_img = null),
-                                      ),
-                                    ),
-
-                                    SizedBox(width: 10),
-
-                                    Expanded(
-                                      child: _PhotoBox(
-                                        label: 'Zoom Out',
-                                        fieldKey: 'point_zoomout_img',
-                                        newBytes: point_zoomout_img,
-                                        serverFilename: widget.point.pointZoomoutImg,
-                                        onTap: () => _showSourcePicker(
-                                          title: 'รูปแสดงบริเวณหมุดรังวัด zoom out',
-                                          ratioX: 16,
-                                          ratioY: 9,
-                                          onPicked: (b) => setState(() {
-                                            point_zoomout_img = b;
-                                            _removedImageFields.remove('point_zoomout_img');
-                                          }),
-                                        ),
-                                        onDeleteNew: () => setState(() => point_zoomout_img = null),
-                                      ),
-                                    ),
-
-                                  ],
-                                ),
-
-                                SizedBox(height: 20),
-
-                                Point_Title(title: 'ข้อมูล UTM'),
-
-                                SizedBox(height: 10),
-
-                                /// UTM
-                                Row(
-                                  key: _utmSectionKey,
-                                  children: [
-
-                                    Expanded(
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(
-                                            color: Colors.black,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.fromLTRB(20, 15, 10, 15),
-                                          child: Column(
-                                            children: [
-
-                                              w_text_thai_notosansthai(
-                                                  name: 'UTM',
-                                                  font_Size: 16,
-                                                  fontWeight : FontWeight.w700
-                                              ),
-
-                                              SizedBox(height: 10),
-
-                                              point_text_field_row_c30(
-                                                  name: 'Northing',
-                                                  controller: northing_Controller,
-                                                  hintText: '0000000.000',
-                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                  validator: (value) {
-                                                    if (value == null || value.isEmpty) return null;
-
-                                                    final text = value.trim();
-
-                                                    if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                    final validNumber = RegExp(r'^\d{7}(\.\d+)?$');
-                                                    if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
-
-                                                    if (text.contains('.')) {
-                                                      final decimalPart = text.split('.').last;
-                                                      if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
-                                                    }
-
-                                                    return null;
-                                                  },
-                                                  nameWidth: 160
-                                              ),
-
-                                              point_text_field_row_c30(
-                                                  name: 'Easting',
-                                                  controller: easting_Controller,
-                                                  hintText: '000000.000',
-                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                  validator: (value) {
-                                                    if (value == null || value.isEmpty) return null;
-
-                                                    final text = value.trim();
-
-                                                    if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                    final validNumber = RegExp(r'^\d{6}(\.\d+)?$');
-                                                    if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
-
-                                                    if (text.contains('.')) {
-                                                      final decimalPart = text.split('.').last;
-                                                      if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
-                                                    }
-
-                                                    return null;
-                                                  },
-                                                  nameWidth: 160
-                                              ),
-
-                                              point_text_field_row_c30(
-                                                  name: 'Ortho Height',
-                                                  controller: height_m_Controller,
-                                                  hintText: '0.000',
-                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                  validator: (value) {
-                                                    if (value == null || value.isEmpty) return null;
-
-                                                    final text = value.trim();
-
-                                                    if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                    final validNumber = RegExp(r'^\d+(\.\d+)?$');
-                                                    if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
-
-                                                    if (text.contains('.')) {
-                                                      final decimalPart = text.split('.').last;
-                                                      if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
-                                                    }
-
-                                                    return null;
-                                                  },
-                                                  nameWidth: 160
-                                              ),
-
-                                              point_text_field_row_c30(
-                                                  name: 'ความสูงเหนือทรงรี (h)',
-                                                  controller: ellipsoidal_m_Controller,
-                                                  hintText: '0.000',
-                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                  validator: (value) {
-                                                    if (value == null || value.isEmpty) return null;
-
-                                                    final text = value.trim();
-
-                                                    if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                    final validNumber = RegExp(r'^\d+(\.\d+)?$');
-                                                    if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
-
-                                                    if (text.contains('.')) {
-                                                      final decimalPart = text.split('.').last;
-                                                      if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
-                                                    }
-
-                                                    return null;
-                                                  },
-                                                  nameWidth: 160
-                                              ),
-
-                                              point_text_field_row_c30(
-                                                  name: 'Antenna Height',
-                                                  controller: antenna_m_Controller,
-                                                  hintText: '0.000',
-                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                                                  validator: (value) {
-                                                    if (value == null || value.isEmpty) return null;
-
-                                                    final text = value.trim();
-
-                                                    if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                    if (text == '-' || text == '.') return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                    final validNumber = RegExp(r'^-?\d+(\.\d{1,3})?$');
-                                                    if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
-
-                                                    if (text.contains('.')) {
-                                                      final decimalPart = text.split('.').last;
-                                                      if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
-                                                    }
-
-                                                    return null;
-                                                  },
-                                                  nameWidth: 160
-                                              ),
-
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-
-                                    SizedBox(width: 10),
-
-                                    /// Datum
-                                    SizedBox(
-                                      width: 200,
-                                      height: 345,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(
-                                            color: Colors.black,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.fromLTRB(20, 15, 10, 15),
-                                          child: Column(
-                                            children: [
-
-                                              point_dropdown_field_column_c30(
-                                                  name: 'Datum',
-                                                  value: datum,
-                                                  items: ['Indian 1975', 'WGS84'],
-                                                  onChanged: (v) => setState(() => datum = v),
-                                                  unitWidth: 0
-                                              ),
-
-                                              point_dropdown_field_column_c30(
-                                                  name: 'UTM Zone',
-                                                  value: utm,
-                                                  items: ['47N', '48N'],
-                                                  onChanged: (v) => setState(() => utm   = v),
-                                                  unitWidth: 0
-                                              ),
-
-                                              point_dropdown_field_column_c30(
-                                                  name: 'EGM',
-                                                  value: egm,
-                                                  items: ['EGM96', 'EGM2008', 'TGM2017', 'EGM2020', 'GOCO2025s'],
-                                                  onChanged: (v) => setState(() => egm   = v),
-                                                  unitWidth: 0
-                                              ),
-
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-
-                                  ],
-                                ),
-
-                                SizedBox(height: 10),
-
-                                /// DOP
-                                Container(
-                                  key: _gdopSectionKey,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 1.5,
-                                    ),
+                                  /// ชื่อหมุดรังวัด
+                                  point_text_field_column_c5_edit(
+                                    key: _pointNameSectionKey,
+                                    name: 'ชื่อหมุดรังวัด',
+                                    controller: point_name_Controller,
+                                    hintText: '-',
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'กรุณาระบุชื่อหมุดรังวัด';
+                                      }
+                                      return null;
+                                    },
                                   ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(20, 15, 10, 10),
-                                    child: Column(
-                                      children: [
 
-                                        Row(
-                                          children: [
+                                  SizedBox(height: 5),
 
-                                            Expanded(
-                                              child: point_text_field_row_c30(
-                                                  name: 'GDOP',
-                                                  controller: gdop_m_Controller,
-                                                  hintText: '0.0',
-                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                  validator: (value) {
-                                                    if (value == null || value.isEmpty) return null;
+                                  Point_Title(title: 'รูปแสดงบริเวณหมุดรังวัด'),
 
-                                                    final text = value.trim();
+                                  SizedBox(height: 10),
 
-                                                    if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+                                  /// รูปแสดงบริเวณหมุดรังวัด
+                                  Row(
+                                    children: [
 
-                                                    final validNumber = RegExp(r'^\d+(\.\d+)?$');
-                                                    if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+                                      Expanded(
+                                        child: _PhotoBox(
+                                          label: 'Zoom In',
+                                          fieldKey: 'point_zoomin_img',
+                                          newBytes: point_zoomin_img,
+                                          serverFilename: widget.point.pointZoominImg,
+                                          onTap: () => _showSourcePicker(
+                                            title: 'รูปแสดงบริเวณหมุดรังวัด zoom in',
+                                            ratioX: 16,
+                                            ratioY: 9,
+                                            onPicked: (b) => setState(() {
+                                              point_zoomin_img = b;
+                                              _removedImageFields.remove('point_zoomin_img');
+                                            }),
+                                          ),
+                                          onDeleteNew: () => setState(() => point_zoomin_img = null),
+                                        ),
+                                      ),
 
-                                                    if (text.contains('.')) {
-                                                      final decimalPart = text.split('.').last;
-                                                      if (decimalPart.length > 1) return 'กรุณาระบุเลขทศนิยม 1 ตำแหน่ง';
-                                                    }
+                                      SizedBox(width: 10),
 
-                                                    return null;
-                                                  },
-                                                  nameWidth: 50),
+                                      Expanded(
+                                        child: _PhotoBox(
+                                          label: 'Zoom Out',
+                                          fieldKey: 'point_zoomout_img',
+                                          newBytes: point_zoomout_img,
+                                          serverFilename: widget.point.pointZoomoutImg,
+                                          onTap: () => _showSourcePicker(
+                                            title: 'รูปแสดงบริเวณหมุดรังวัด zoom out',
+                                            ratioX: 16,
+                                            ratioY: 9,
+                                            onPicked: (b) => setState(() {
+                                              point_zoomout_img = b;
+                                              _removedImageFields.remove('point_zoomout_img');
+                                            }),
+                                          ),
+                                          onDeleteNew: () => setState(() => point_zoomout_img = null),
+                                        ),
+                                      ),
+
+                                    ],
+                                  ),
+
+                                  SizedBox(height: 20),
+
+                                  Point_Title(title: 'ข้อมูล UTM'),
+
+                                  SizedBox(height: 10),
+
+                                  /// UTM
+                                  Row(
+                                    key: _utmSectionKey,
+                                    children: [
+
+                                      Expanded(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: Colors.black,
+                                              width: 1.5,
                                             ),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(20, 15, 10, 15),
+                                            child: Column(
+                                              children: [
 
-                                            SizedBox(width: 10),
+                                                w_text_thai_notosansthai(
+                                                    name: 'UTM',
+                                                    font_Size: 16,
+                                                    fontWeight : FontWeight.w700
+                                                ),
 
-                                            Expanded(
+                                                SizedBox(height: 10),
+
+                                                point_text_field_row_c30(
+                                                    name: 'Northing',
+                                                    controller: northing_Controller,
+                                                    hintText: '0000000.000',
+                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                    validator: (value) {
+                                                      if (value == null || value.isEmpty) return null;
+
+                                                      final text = value.trim();
+
+                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                      final validNumber = RegExp(r'^\d{7}(\.\d+)?$');
+                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                      if (text.contains('.')) {
+                                                        final decimalPart = text.split('.').last;
+                                                        if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
+                                                      }
+
+                                                      return null;
+                                                    },
+                                                    nameWidth: 160
+                                                ),
+
+                                                point_text_field_row_c30(
+                                                    name: 'Easting',
+                                                    controller: easting_Controller,
+                                                    hintText: '000000.000',
+                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                    validator: (value) {
+                                                      if (value == null || value.isEmpty) return null;
+
+                                                      final text = value.trim();
+
+                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                      final validNumber = RegExp(r'^\d{6}(\.\d+)?$');
+                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                      if (text.contains('.')) {
+                                                        final decimalPart = text.split('.').last;
+                                                        if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
+                                                      }
+
+                                                      return null;
+                                                    },
+                                                    nameWidth: 160
+                                                ),
+
+                                                point_text_field_row_c30(
+                                                    name: 'Ortho Height',
+                                                    controller: height_m_Controller,
+                                                    hintText: '0.000',
+                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                    validator: (value) {
+                                                      if (value == null || value.isEmpty) return null;
+
+                                                      final text = value.trim();
+
+                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                      final validNumber = RegExp(r'^\d+(\.\d+)?$');
+                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                      if (text.contains('.')) {
+                                                        final decimalPart = text.split('.').last;
+                                                        if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
+                                                      }
+
+                                                      return null;
+                                                    },
+                                                    nameWidth: 160
+                                                ),
+
+                                                point_text_field_row_c30(
+                                                    name: 'ความสูงเหนือทรงรี (h)',
+                                                    controller: ellipsoidal_m_Controller,
+                                                    hintText: '0.000',
+                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                    validator: (value) {
+                                                      if (value == null || value.isEmpty) return null;
+
+                                                      final text = value.trim();
+
+                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                      final validNumber = RegExp(r'^\d+(\.\d+)?$');
+                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                      if (text.contains('.')) {
+                                                        final decimalPart = text.split('.').last;
+                                                        if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
+                                                      }
+
+                                                      return null;
+                                                    },
+                                                    nameWidth: 160
+                                                ),
+
+                                                point_text_field_row_c30(
+                                                    name: 'Antenna Height',
+                                                    controller: antenna_m_Controller,
+                                                    hintText: '0.000',
+                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                                    validator: (value) {
+                                                      if (value == null || value.isEmpty) return null;
+
+                                                      final text = value.trim();
+
+                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                      if (text == '-' || text == '.') return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                      final validNumber = RegExp(r'^-?\d+(\.\d{1,3})?$');
+                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                      if (text.contains('.')) {
+                                                        final decimalPart = text.split('.').last;
+                                                        if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
+                                                      }
+
+                                                      return null;
+                                                    },
+                                                    nameWidth: 160
+                                                ),
+
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      SizedBox(width: 10),
+
+                                      /// Datum
+                                      SizedBox(
+                                        width: 200,
+                                        height: 345,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: Colors.black,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(20, 15, 10, 15),
+                                            child: Column(
+                                              children: [
+
+                                                point_dropdown_field_column_c30(
+                                                    name: 'Datum',
+                                                    value: datum,
+                                                    items: ['Indian 1975', 'WGS84'],
+                                                    onChanged: (v) => setState(() => datum = v),
+                                                    unitWidth: 0
+                                                ),
+
+                                                point_dropdown_field_column_c30(
+                                                    name: 'UTM Zone',
+                                                    value: utm,
+                                                    items: ['47N', '48N'],
+                                                    onChanged: (v) => setState(() => utm   = v),
+                                                    unitWidth: 0
+                                                ),
+
+                                                point_dropdown_field_column_c30(
+                                                    name: 'EGM',
+                                                    value: egm,
+                                                    items: ['EGM96', 'EGM2008', 'TGM2017', 'EGM2020', 'GOCO2025s'],
+                                                    onChanged: (v) => setState(() => egm   = v),
+                                                    unitWidth: 0
+                                                ),
+
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                    ],
+                                  ),
+
+                                  SizedBox(height: 10),
+
+                                  /// DOP
+                                  Container(
+                                    key: _gdopSectionKey,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 15, 10, 10),
+                                      child: Column(
+                                        children: [
+
+                                          Row(
+                                            children: [
+
+                                              Expanded(
                                                 child: point_text_field_row_c30(
-                                                    name: 'PDOP',
-                                                    controller: pdop_m_Controller,
+                                                    name: 'GDOP',
+                                                    controller: gdop_m_Controller,
                                                     hintText: '0.0',
                                                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                                     validator: (value) {
@@ -1451,679 +1427,707 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
 
                                                       return null;
                                                     },
-                                                    nameWidth: 50)
-                                            ),
+                                                    nameWidth: 50),
+                                              ),
 
-                                          ],
+                                              SizedBox(width: 10),
+
+                                              Expanded(
+                                                  child: point_text_field_row_c30(
+                                                      name: 'PDOP',
+                                                      controller: pdop_m_Controller,
+                                                      hintText: '0.0',
+                                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                      validator: (value) {
+                                                        if (value == null || value.isEmpty) return null;
+
+                                                        final text = value.trim();
+
+                                                        if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                        final validNumber = RegExp(r'^\d+(\.\d+)?$');
+                                                        if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                        if (text.contains('.')) {
+                                                          final decimalPart = text.split('.').last;
+                                                          if (decimalPart.length > 1) return 'กรุณาระบุเลขทศนิยม 1 ตำแหน่ง';
+                                                        }
+
+                                                        return null;
+                                                      },
+                                                      nameWidth: 50)
+                                              ),
+
+                                            ],
+                                          ),
+
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                  child: point_text_field_row_c30(
+                                                      name: 'HDOP',
+                                                      controller: hdop_m_Controller,
+                                                      hintText: '0.000',
+                                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                      validator: (value) {
+                                                        if (value == null || value.isEmpty) return null;
+
+                                                        final text = value.trim();
+
+                                                        if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                        final validNumber = RegExp(r'^\d+(\.\d+)?$');
+                                                        if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                        if (text.contains('.')) {
+                                                          final decimalPart = text.split('.').last;
+                                                          if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
+                                                        }
+
+                                                        return null;
+                                                      },
+                                                      nameWidth: 50)
+                                              ),
+
+                                              SizedBox(width: 10),
+
+                                              Expanded(
+                                                  child: point_text_field_row_c30(
+                                                      name: '3DCQ',
+                                                      controller: dcq_m_Controller,
+                                                      hintText: '0.000',
+                                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                      validator: (value) {
+                                                        if (value == null || value.isEmpty) return null;
+
+                                                        final text = value.trim();
+
+                                                        if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                        final validNumber = RegExp(r'^\d+(\.\d+)?$');
+                                                        if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                        if (text.contains('.')) {
+                                                          final decimalPart = text.split('.').last;
+                                                          if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
+                                                        }
+
+                                                        return null;
+                                                      },
+                                                      nameWidth: 50)
+                                              )
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  SizedBox(height: 20),
+
+                                  Point_Title(title: 'วิธีการรังวัด'),
+
+                                  SizedBox(height: 10),
+
+                                  /// วิธีการรังวัด
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 15, 10, 5),
+                                      child: Row(
+                                        children: [
+
+                                          Expanded(
+                                              child: point_dropdown_field_row_c30(
+                                                name: 'วิธีการรังวัดหลัก',
+                                                value: survey_main,
+                                                items: ['Static', 'Kinematic'],
+                                                onChanged: (v) => setState(() { survey_main = v; survey_sub = null; }),
+                                                nameWidth: 120,
+                                              )
+                                          ),
+
+                                          SizedBox(width: 10),
+
+                                          Expanded(
+                                              child: point_dropdown_field_row_c30(
+                                                name: 'วิธีการรังวัดย่อย',
+                                                value: survey_sub,
+                                                items: survey_main == 'Static'
+                                                    ? ['Static', 'Fast Static']
+                                                    : survey_main == 'Kinematic'
+                                                    ? ['RTK', 'NRTK']
+                                                    : [],
+                                                onChanged: (v) => setState(() => survey_sub = v),
+                                                nameWidth: 120,
+                                              )
+                                          ),
+
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  SizedBox(height: 20),
+
+                                  Point_Title(title: 'ที่ตั้ง'),
+
+                                  SizedBox(height: 10),
+
+                                  /// ตำบล, อำเภอ, จังหวัด
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.black, width: 1.5),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 15, 10, 10),
+                                      child: Column(
+                                        children: [
+
+                                          // จังหวัด + อำเภอ
+                                          Row(
+                                            children: [
+
+                                              Expanded(
+                                                child: _provinceList.isEmpty
+                                                    ? point_text_field_row_c30(
+                                                    name: 'จังหวัด',
+                                                    controller: TextEditingController(),
+                                                    hintText: '-',
+                                                    readOnly: true,
+                                                    validator: (_) => null,
+                                                    nameWidth: 60,
+                                                    unit: '',
+                                                    unitWidth: 0
+                                                )
+                                                    : point_dropdown_field_row_c30(
+                                                    name: 'จังหวัด',
+                                                    value: province,
+                                                    items: _provinceList,
+                                                    onChanged: _onProvinceChanged,
+                                                    nameWidth: 60,
+                                                    unitWidth: 0
+                                                ),
+                                              ),
+
+                                              SizedBox(width: 10),
+
+                                              Expanded(
+                                                child: _amphureList.isEmpty
+                                                    ? point_text_field_row_c30(
+                                                    name: 'อำเภอ',
+                                                    controller: amphoe_Controller,
+                                                    hintText: province == null ? 'เลือกจังหวัดก่อน' : '-',
+                                                    readOnly: province == null,
+                                                    validator: (_) => null,
+                                                    nameWidth: 60,
+                                                    unit: '',
+                                                    unitWidth: 0
+                                                )
+                                                    : point_dropdown_field_row_c30(
+                                                    name: 'อำเภอ',
+                                                    value: _selectedAmphoe,
+                                                    items: _amphureList,
+                                                    onChanged: _onAmphoeChanged,
+                                                    nameWidth: 60,
+                                                    unitWidth: 0
+                                                ),
+                                              ),
+
+                                            ],
+                                          ),
+
+                                          // ตำบล + วันที่
+                                          Row(
+                                            children: [
+
+                                              Expanded(
+                                                child: _tambonList.isEmpty
+                                                    ? point_text_field_row_c30(
+                                                    name: 'ตำบล',
+                                                    controller: tambon_Controller,
+                                                    hintText: _selectedAmphoe == null ? 'เลือกอำเภอก่อน' : '-',
+                                                    readOnly: _selectedAmphoe == null,
+                                                    validator: (_) => null,
+                                                    nameWidth: 60,
+                                                    unit: '',
+                                                    unitWidth: 0)
+                                                    : point_dropdown_field_row_c30(
+                                                    name: 'ตำบล',
+                                                    value: _selectedTambon,
+                                                    items: _tambonList,
+                                                    onChanged: (v) => setState(() => _selectedTambon = v),
+                                                    nameWidth: 60,
+                                                    unitWidth: 0
+                                                ),
+                                              ),
+
+                                              SizedBox(width: 10),
+
+                                              Expanded(
+                                                  child: text_field_date_row(
+                                                    name: 'วันที่สำรวจ',
+                                                    hint_Text: point_date.toString().split(' ')[0],
+                                                    controller: point_date_Controller,
+                                                  )
+                                              ),
+
+                                            ],
+                                          ),
+
+
+                                          // ปฏิทิน
+                                          SizedBox(
+                                            width: 340,
+                                            child: Calendar(
+                                                Date_name: point_date,
+                                                Date_Selected: _onDateSelected
+                                            ),
+                                          ),
+
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  SizedBox(height: 20),
+
+                                  Point_Title(title: 'รูปวาดภาคสนาม'),
+
+                                  SizedBox(height: 10),
+
+                                  /// รูปวาดภาคสนาม
+                                  ValueListenableBuilder<Box<SavedDrawing>>(
+                                    valueListenable: drawBox.listenable(),
+                                    builder: (_, __, ___) => _buildDrawBox(),
+                                  ),
+
+                                  SizedBox(height: 20),
+
+                                  Point_Title(title: 'JOB'),
+
+                                  SizedBox(height: 10),
+
+                                  /// JOB
+                                  Container(
+                                    key: _jobSectionKey,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 15, 15, 15),
+                                      child: Column(
+                                        children: [
+
+                                          Row(
+                                              children: [
+
+                                                Expanded(
+                                                    child: point_text_field_row_c30(
+                                                        name: 'ชื่อ JOB',
+                                                        controller: job_Controller,
+                                                        hintText: 'Text',
+                                                        validator: (_) => null,
+                                                        nameWidth: 60,
+                                                        unit: '',
+                                                        unitWidth: 0
+                                                    )
+                                                ),
+
+                                                SizedBox(width: 10),
+
+                                                SizedBox(
+                                                    width: 300,
+                                                    child: point_text_field_row_c30(
+                                                        name: 'GNSS',
+                                                        controller: gnss_Controller,
+                                                        hintText: 'Text',
+                                                        validator: (_) => null,
+                                                        nameWidth: 50,
+                                                        unit: '',
+                                                        unitWidth: 0
+                                                    )
+                                                ),
+
+                                              ]
+                                          ),
+
+                                          SizedBox(height: 10),
+
+                                          /// RF1
+                                          Row(
+                                              children: [
+                                                Expanded(
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white,
+                                                        borderRadius: BorderRadius.circular(20),
+                                                        border: Border.all(
+                                                          color: Colors.black,
+                                                          width: 1.5,
+                                                        ),
+                                                      ),
+                                                      child: Padding(
+                                                          padding: const EdgeInsets.fromLTRB(20, 15, 10, 10),
+                                                          child: Column(
+                                                              children: [
+
+                                                                point_text_field_row_c30(
+                                                                    name: 'RF1',
+                                                                    controller: rf_1_Controller,
+                                                                    hintText: 'Text',
+                                                                    validator: (_) => null,
+                                                                    nameWidth: 40
+                                                                ),
+
+                                                                point_text_field_row_c30(
+                                                                    name: 'ระยะ',
+                                                                    controller: distance_m_1_Controller,
+                                                                    hintText: 'metre',
+                                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                                    validator: (value) {
+                                                                      if (value == null || value.isEmpty) return null;
+
+                                                                      final text = value.trim();
+
+                                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                                      final validNumber = RegExp(r'^\d+(\.\d+)?$');
+                                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                                      if (text.contains('.')) {
+                                                                        final decimalPart = text.split('.').last;
+                                                                        if (decimalPart.length > 2) return 'กรุณาระบุเลขทศนิยม 2 ตำแหน่ง';
+                                                                      }
+
+                                                                      return null;
+                                                                    },
+                                                                    nameWidth: 40
+                                                                ),
+
+                                                                point_text_field_row_c30(
+                                                                    name: 'AZ',
+                                                                    controller: az_1_Controller,
+                                                                    hintText: 'degree',
+                                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                                    validator: (value) {
+                                                                      if (value == null || value.isEmpty) return null;
+
+                                                                      final text = value.trim();
+
+                                                                      if (!RegExp(r'^\d+$').hasMatch(text)) {
+                                                                        return 'กรุณาระบุเป็นจำนวนเต็ม';
+                                                                      }
+
+                                                                      final az = int.parse(text);
+
+                                                                      if (az < 0 || az > 360) {
+                                                                        return 'กรุณาระบุค่า 0 - 360';
+                                                                      }
+
+                                                                      return null;
+                                                                    },
+                                                                    nameWidth: 40,
+                                                                    unit: '°'
+                                                                ),
+                                                              ]
+                                                          )
+                                                      ),
+                                                    )
+                                                ),
+
+                                                SizedBox(width: 10),
+
+                                                /// RF2
+                                                Expanded(
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white,
+                                                        borderRadius: BorderRadius.circular(20),
+                                                        border: Border.all(
+                                                          color: Colors.black,
+                                                          width: 1.5,
+                                                        ),
+                                                      ),
+                                                      child: Padding(
+                                                          padding: const EdgeInsets.fromLTRB(20, 15, 10, 10),
+                                                          child: Column(
+                                                              children: [
+
+                                                                point_text_field_row_c30(
+                                                                    name: 'RF2',
+                                                                    controller: rf_2_Controller,
+                                                                    hintText: 'Text',
+                                                                    validator: (_) => null,
+                                                                    nameWidth: 40
+                                                                ),
+
+                                                                point_text_field_row_c30(
+                                                                    name: 'ระยะ',
+                                                                    controller: distance_m_2_Controller,
+                                                                    hintText: 'metre',
+                                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                                    validator: (value) {
+                                                                      if (value == null || value.isEmpty) return null;
+
+                                                                      final text = value.trim();
+
+                                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+
+                                                                      final validNumber = RegExp(r'^\d+(\.\d+)?$');
+                                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+
+                                                                      if (text.contains('.')) {
+                                                                        final decimalPart = text.split('.').last;
+                                                                        if (decimalPart.length > 2) return 'กรุณาระบุเลขทศนิยม 2 ตำแหน่ง';
+                                                                      }
+
+                                                                      return null;
+                                                                    },
+                                                                    nameWidth: 40
+                                                                ),
+
+                                                                point_text_field_row_c30(
+                                                                    name: 'AZ',
+                                                                    controller: az_2_Controller,
+                                                                    hintText: 'degree',
+                                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                                    validator: (value) {
+                                                                      if (value == null || value.isEmpty) return null;
+
+                                                                      final text = value.trim();
+
+                                                                      if (!RegExp(r'^\d+$').hasMatch(text)) {
+                                                                        return 'กรุณาระบุเป็นจำนวนเต็ม';
+                                                                      }
+
+                                                                      final az = int.parse(text);
+
+                                                                      if (az < 0 || az > 360) {
+                                                                        return 'กรุณาระบุค่า 0 - 360';
+                                                                      }
+
+                                                                      return null;
+                                                                    },
+                                                                    nameWidth: 40,
+                                                                    unit: '°'
+                                                                ),
+                                                              ]
+                                                          )
+                                                      ),
+                                                    )
+                                                ),
+                                              ]
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  SizedBox(height: 20),
+
+                                  Point_Title(title: 'รูปถ่ายประกอบจุดตรวจสอบ'),
+
+                                  SizedBox(height: 10),
+
+                                  /// รูปถ่ายประกอบจุดตรวจสอบ
+                                  GridView.count(
+                                    padding: EdgeInsets.zero,
+                                    crossAxisCount: 2, // 2 ช่องต่อแถว
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    crossAxisSpacing: 10, // ระยะห่าง แนวนอน (ซ้าย-ขวา)
+                                    mainAxisSpacing: 10, // ระยะห่าง แนวตั้ง (บน-ล่าง)
+                                    childAspectRatio: 1.1, // อัตราส่วน กว้าง : สูง ของแต่ละช่อง
+                                    children: [
+
+                                      _PhotoBox(
+                                        label: 'เลขหมุดรังวัด',
+                                        fieldKey: 'point_survey_img',
+                                        newBytes: point_survey_img,
+                                        serverFilename: widget.point.pointSurveyImg,
+                                        onTap: () => _showSourcePicker(
+                                          title: 'เลขหมุดรังวัด',
+                                          ratioX: 4,
+                                          ratioY: 3,
+                                          onPicked: (b) => setState(() {
+                                            point_survey_img = b;
+                                            _removedImageFields.remove('point_survey_img');
+                                          }),
                                         ),
+                                        onDeleteNew: () => setState(() => point_survey_img = null),
+                                      ),
 
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                                child: point_text_field_row_c30(
-                                                    name: 'HDOP',
-                                                    controller: hdop_m_Controller,
-                                                    hintText: '0.000',
-                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                    validator: (value) {
-                                                      if (value == null || value.isEmpty) return null;
+                                      _PhotoBox(
+                                        label: 'หน้าเครื่อง Controller',
+                                        fieldKey: 'point_controller_img',
+                                        newBytes: point_controller_img,
+                                        serverFilename: widget.point.pointControllerImg,
+                                        onTap: () => _showSourcePicker(
+                                          title: 'หน้าเครื่อง Controller',
+                                          ratioX: 4,
+                                          ratioY: 3,
+                                          onPicked: (b) => setState(() {
+                                            point_controller_img = b;
+                                            _removedImageFields.remove('point_controller_img');
+                                          }),
+                                        ),
+                                        onDeleteNew: () => setState(() => point_controller_img = null),
+                                      ),
 
-                                                      final text = value.trim();
+                                      _PhotoBox(
+                                        label: 'ทิศเหนือ',
+                                        fieldKey: 'n_survey_img',
+                                        newBytes: n_survey_img,
+                                        serverFilename: widget.point.nSurveyImg,
+                                        onTap: () => _showSourcePicker(
+                                          title: 'ทิศเหนือ',
+                                          ratioX: 4,
+                                          ratioY: 3,
+                                          onPicked: (b) => setState(() {
+                                            n_survey_img = b;
+                                            _removedImageFields.remove('n_survey_img');
+                                          }),
+                                        ),
+                                        onDeleteNew: () => setState(() => n_survey_img = null),
+                                      ),
 
-                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
+                                      _PhotoBox(
+                                        label: 'ทิศใต้',
+                                        fieldKey: 's_survey_img',
+                                        newBytes: s_survey_img,
+                                        serverFilename: widget.point.sSurveyImg,
+                                        onTap: () => _showSourcePicker(
+                                          title: 'ทิศใต้',
+                                          ratioX: 4,
+                                          ratioY: 3,
+                                          onPicked: (b) => setState(() {
+                                            s_survey_img = b;
+                                            _removedImageFields.remove('s_survey_img');
+                                          }),
+                                        ),
+                                        onDeleteNew: () => setState(() => s_survey_img = null),
+                                      ),
 
-                                                      final validNumber = RegExp(r'^\d+(\.\d+)?$');
-                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
+                                      _PhotoBox(
+                                        label: 'ทิศตะวันออก',
+                                        fieldKey: 'e_survey_img',
+                                        newBytes: e_survey_img,
+                                        serverFilename: widget.point.eSurveyImg,
+                                        onTap: () => _showSourcePicker(
+                                          title: 'ทิศตะวันออก',
+                                          ratioX: 4,
+                                          ratioY: 3,
+                                          onPicked: (b) => setState(() {
+                                            e_survey_img = b;
+                                            _removedImageFields.remove('e_survey_img');
+                                          }),
+                                        ),
+                                        onDeleteNew: () => setState(() => e_survey_img = null),
+                                      ),
 
-                                                      if (text.contains('.')) {
-                                                        final decimalPart = text.split('.').last;
-                                                        if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
-                                                      }
+                                      _PhotoBox(
+                                        label: 'ทิศตะวันตก',
+                                        fieldKey: 'w_survey_img',
+                                        newBytes: w_survey_img,
+                                        serverFilename: widget.point.wSurveyImg,
+                                        onTap: () => _showSourcePicker(
+                                          title: 'ทิศตะวันตก',
+                                          ratioX: 4,
+                                          ratioY: 3,
+                                          onPicked: (b) => setState(() {
+                                            w_survey_img = b;
+                                            _removedImageFields.remove('w_survey_img');
+                                          }),
+                                        ),
+                                        onDeleteNew: () => setState(() => w_survey_img = null),
+                                      ),
 
-                                                      return null;
-                                                    },
-                                                    nameWidth: 50)
-                                            ),
-
-                                            SizedBox(width: 10),
-
-                                            Expanded(
-                                                child: point_text_field_row_c30(
-                                                    name: '3DCQ',
-                                                    controller: dcq_m_Controller,
-                                                    hintText: '0.000',
-                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                    validator: (value) {
-                                                      if (value == null || value.isEmpty) return null;
-
-                                                      final text = value.trim();
-
-                                                      if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                      final validNumber = RegExp(r'^\d+(\.\d+)?$');
-                                                      if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
-
-                                                      if (text.contains('.')) {
-                                                        final decimalPart = text.split('.').last;
-                                                        if (decimalPart.length > 3) return 'กรุณาระบุเลขทศนิยม 3 ตำแหน่ง';
-                                                      }
-
-                                                      return null;
-                                                    },
-                                                    nameWidth: 50)
-                                            )
-                                          ],
-                                        )
-                                      ],
-                                    ),
+                                    ],
                                   ),
-                                ),
 
-                                SizedBox(height: 20),
+                                  SizedBox(height: 20),
 
-                                Point_Title(title: 'วิธีการรังวัด'),
+                                  Point_Title(title: 'รายละเอียดเพิ่มเติม'),
 
-                                SizedBox(height: 10),
+                                  SizedBox(height: 10),
 
-                                /// วิธีการรังวัด
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 1.5,
-                                    ),
+                                  /// Box รายละเอียดเพิ่มเติม
+                                  ValueListenableBuilder<Box<SavedDrawing>>(
+                                    valueListenable: noteBox.listenable(),
+                                    builder: (_, __, ___) => _buildNoteBox(),
                                   ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(20, 15, 10, 5),
-                                    child: Row(
+
+                                  SizedBox(height: 20),
+
+                                  /// ชื่อหมุดรังวัด
+                                  point_text_field_column_c5_edit(
+                                    name: 'รายละเอียดเพิ่มเติม',
+                                    controller: point_note_Controller,
+                                    hintText: '-',
+                                    keyboardType: TextInputType.multiline,
+                                    maxLines: null,
+                                    minLines: 5,
+                                    validator: (value) {
+
+                                    },
+                                  ),
+
+                                  SizedBox(height: 10),
+
+                                  /// ผู้รังวัด / ผู้ตรวจสอบ
+                                  Row(
                                       children: [
 
                                         Expanded(
-                                            child: point_dropdown_field_row_c30(
-                                              name: 'วิธีการรังวัดหลัก',
-                                              value: survey_main,
-                                              items: ['Static', 'Kinematic'],
-                                              onChanged: (v) => setState(() { survey_main = v; survey_sub = null; }),
-                                              nameWidth: 120,
+                                            child: _UserPickerField(
+                                              label: 'ผู้รังวัด',
+                                              selectedUser: survey_technician,
+                                              onTap: () => _edit_showUserPicker(
+                                                  title: 'ยืนยันการเป็นผู้รังวัด',
+                                                  current: survey_technician,
+                                                  onConfirm: (u) => setState(() => survey_technician = u)
+                                              ),
+                                              onClear: () => setState(() => survey_technician = null
+                                              ),
                                             )
                                         ),
 
                                         SizedBox(width: 10),
 
                                         Expanded(
-                                            child: point_dropdown_field_row_c30(
-                                              name: 'วิธีการรังวัดย่อย',
-                                              value: survey_sub,
-                                              items: survey_main == 'Static'
-                                                  ? ['Static', 'Fast Static']
-                                                  : survey_main == 'Kinematic'
-                                                  ? ['RTK', 'NRTK']
-                                                  : [],
-                                              onChanged: (v) => setState(() => survey_sub = v),
-                                              nameWidth: 120,
+                                            child: _UserPickerField(
+                                              label: 'ผู้ตรวจสอบ',
+                                              selectedUser: _qc,
+                                              onTap: () => _edit_showUserPicker(
+                                                  title: 'ยืนยันการเป็นผู้ตรวจสอบ',
+                                                  current: _qc, onConfirm: (u) => setState(() => _qc = u)
+                                              ),
+                                              onClear: () => setState(() => _qc = null),
                                             )
                                         ),
 
-                                      ],
-                                    ),
+                                      ]
                                   ),
-                                ),
 
-                                SizedBox(height: 20),
+                                  SizedBox(height: 20),
 
-                                Point_Title(title: 'ที่ตั้ง'),
-
-                                SizedBox(height: 10),
-
-                                /// ตำบล, อำเภอ, จังหวัด
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Colors.black, width: 1.5),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(20, 15, 10, 10),
-                                    child: Column(
-                                      children: [
-
-                                        // จังหวัด + อำเภอ
-                                        Row(
-                                          children: [
-
-                                            Expanded(
-                                              child: _provinceList.isEmpty
-                                                  ? point_text_field_row_c30(
-                                                  name: 'จังหวัด',
-                                                  controller: TextEditingController(),
-                                                  hintText: '-',
-                                                  readOnly: true,
-                                                  validator: (_) => null,
-                                                  nameWidth: 60,
-                                                  unit: '',
-                                                  unitWidth: 0
-                                              )
-                                                  : point_dropdown_field_row_c30(
-                                                  name: 'จังหวัด',
-                                                  value: province,
-                                                  items: _provinceList,
-                                                  onChanged: _onProvinceChanged,
-                                                  nameWidth: 60,
-                                                  unitWidth: 0
-                                              ),
-                                            ),
-
-                                            SizedBox(width: 10),
-
-                                            Expanded(
-                                              child: _amphureList.isEmpty
-                                                  ? point_text_field_row_c30(
-                                                  name: 'อำเภอ',
-                                                  controller: amphoe_Controller,
-                                                  hintText: province == null ? 'เลือกจังหวัดก่อน' : '-',
-                                                  readOnly: province == null,
-                                                  validator: (_) => null,
-                                                  nameWidth: 60,
-                                                  unit: '',
-                                                  unitWidth: 0
-                                              )
-                                                  : point_dropdown_field_row_c30(
-                                                  name: 'อำเภอ',
-                                                  value: _selectedAmphoe,
-                                                  items: _amphureList,
-                                                  onChanged: _onAmphoeChanged,
-                                                  nameWidth: 60,
-                                                  unitWidth: 0
-                                              ),
-                                            ),
-
-                                          ],
-                                        ),
-
-                                        // ตำบล + วันที่
-                                        Row(
-                                          children: [
-
-                                            Expanded(
-                                              child: _tambonList.isEmpty
-                                                  ? point_text_field_row_c30(
-                                                  name: 'ตำบล',
-                                                  controller: tambon_Controller,
-                                                  hintText: _selectedAmphoe == null ? 'เลือกอำเภอก่อน' : '-',
-                                                  readOnly: _selectedAmphoe == null,
-                                                  validator: (_) => null,
-                                                  nameWidth: 60,
-                                                  unit: '',
-                                                  unitWidth: 0)
-                                                  : point_dropdown_field_row_c30(
-                                                  name: 'ตำบล',
-                                                  value: _selectedTambon,
-                                                  items: _tambonList,
-                                                  onChanged: (v) => setState(() => _selectedTambon = v),
-                                                  nameWidth: 60,
-                                                  unitWidth: 0
-                                              ),
-                                            ),
-
-                                            SizedBox(width: 10),
-
-                                            Expanded(
-                                                child: text_field_date_row(
-                                                  name: 'วันที่สำรวจ',
-                                                  hint_Text: point_date.toString().split(' ')[0],
-                                                  controller: point_date_Controller,
-                                                )
-                                            ),
-
-                                          ],
-                                        ),
-
-
-                                        // ปฏิทิน
-                                        SizedBox(
-                                          width: 340,
-                                          child: Calendar(
-                                              Date_name: point_date,
-                                              Date_Selected: _onDateSelected
-                                          ),
-                                        ),
-
-                                      ],
-                                    ),
-                                  ),
-                                ),
-
-                                SizedBox(height: 20),
-
-                                Point_Title(title: 'รูปวาดภาคสนาม'),
-
-                                SizedBox(height: 10),
-
-                                /// รูปวาดภาคสนาม
-                                ValueListenableBuilder<Box<SavedDrawing>>(
-                                  valueListenable: drawBox.listenable(),
-                                  builder: (_, __, ___) => _buildDrawBox(),
-                                ),
-
-                                SizedBox(height: 20),
-
-                                Point_Title(title: 'JOB'),
-
-                                SizedBox(height: 10),
-
-                                /// JOB
-                                Container(
-                                  key: _jobSectionKey,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(20, 15, 15, 15),
-                                    child: Column(
-                                      children: [
-
-                                        Row(
-                                            children: [
-
-                                              Expanded(
-                                                  child: point_text_field_row_c30(
-                                                      name: 'ชื่อ JOB',
-                                                      controller: job_Controller,
-                                                      hintText: 'Text',
-                                                      validator: (_) => null,
-                                                      nameWidth: 60,
-                                                      unit: '',
-                                                      unitWidth: 0
-                                                  )
-                                              ),
-
-                                              SizedBox(width: 10),
-
-                                              SizedBox(
-                                                  width: 300,
-                                                  child: point_text_field_row_c30(
-                                                      name: 'GNSS',
-                                                      controller: gnss_Controller,
-                                                      hintText: 'Text',
-                                                      validator: (_) => null,
-                                                      nameWidth: 50,
-                                                      unit: '',
-                                                      unitWidth: 0
-                                                  )
-                                              ),
-
-                                            ]
-                                        ),
-
-                                        SizedBox(height: 10),
-
-                                        /// RF1
-                                        Row(
-                                            children: [
-                                              Expanded(
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white,
-                                                      borderRadius: BorderRadius.circular(20),
-                                                      border: Border.all(
-                                                        color: Colors.black,
-                                                        width: 1.5,
-                                                      ),
-                                                    ),
-                                                    child: Padding(
-                                                        padding: const EdgeInsets.fromLTRB(20, 15, 10, 10),
-                                                        child: Column(
-                                                            children: [
-
-                                                              point_text_field_row_c30(
-                                                                  name: 'RF1',
-                                                                  controller: rf_1_Controller,
-                                                                  hintText: 'Text',
-                                                                  validator: (_) => null,
-                                                                  nameWidth: 40
-                                                              ),
-
-                                                              point_text_field_row_c30(
-                                                                  name: 'ระยะ',
-                                                                  controller: distance_m_1_Controller,
-                                                                  hintText: 'metre',
-                                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                                  validator: (value) {
-                                                                    if (value == null || value.isEmpty) return null;
-
-                                                                    final text = value.trim();
-
-                                                                    if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                                    final validNumber = RegExp(r'^\d+(\.\d+)?$');
-                                                                    if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
-
-                                                                    if (text.contains('.')) {
-                                                                      final decimalPart = text.split('.').last;
-                                                                      if (decimalPart.length > 2) return 'กรุณาระบุเลขทศนิยม 2 ตำแหน่ง';
-                                                                    }
-
-                                                                    return null;
-                                                                  },
-                                                                  nameWidth: 40
-                                                              ),
-
-                                                              point_text_field_row_c30(
-                                                                  name: 'AZ',
-                                                                  controller: az_1_Controller,
-                                                                  hintText: 'degree',
-                                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                                  validator: (value) {
-                                                                    if (value == null || value.isEmpty) return null;
-
-                                                                    final text = value.trim();
-
-                                                                    if (!RegExp(r'^\d+$').hasMatch(text)) {
-                                                                      return 'กรุณาระบุเป็นจำนวนเต็ม';
-                                                                    }
-
-                                                                    final az = int.parse(text);
-
-                                                                    if (az < 0 || az > 360) {
-                                                                      return 'กรุณาระบุค่า 0 - 360';
-                                                                    }
-
-                                                                    return null;
-                                                                  },
-                                                                  nameWidth: 40,
-                                                                  unit: '°'
-                                                              ),
-                                                            ]
-                                                        )
-                                                    ),
-                                                  )
-                                              ),
-
-                                              SizedBox(width: 10),
-
-                                              /// RF2
-                                              Expanded(
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white,
-                                                      borderRadius: BorderRadius.circular(20),
-                                                      border: Border.all(
-                                                        color: Colors.black,
-                                                        width: 1.5,
-                                                      ),
-                                                    ),
-                                                    child: Padding(
-                                                        padding: const EdgeInsets.fromLTRB(20, 15, 10, 10),
-                                                        child: Column(
-                                                            children: [
-
-                                                              point_text_field_row_c30(
-                                                                  name: 'RF2',
-                                                                  controller: rf_2_Controller,
-                                                                  hintText: 'Text',
-                                                                  validator: (_) => null,
-                                                                  nameWidth: 40
-                                                              ),
-
-                                                              point_text_field_row_c30(
-                                                                  name: 'ระยะ',
-                                                                  controller: distance_m_2_Controller,
-                                                                  hintText: 'metre',
-                                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                                  validator: (value) {
-                                                                    if (value == null || value.isEmpty) return null;
-
-                                                                    final text = value.trim();
-
-                                                                    if (text.contains(',')) return 'กรุณาระบุเป็นตัวเลขเท่านั้น';
-
-                                                                    final validNumber = RegExp(r'^\d+(\.\d+)?$');
-                                                                    if (!validNumber.hasMatch(text)) return 'กรุณาตรวจสอบข้อมูล';
-
-                                                                    if (text.contains('.')) {
-                                                                      final decimalPart = text.split('.').last;
-                                                                      if (decimalPart.length > 2) return 'กรุณาระบุเลขทศนิยม 2 ตำแหน่ง';
-                                                                    }
-
-                                                                    return null;
-                                                                  },
-                                                                  nameWidth: 40
-                                                              ),
-
-                                                              point_text_field_row_c30(
-                                                                  name: 'AZ',
-                                                                  controller: az_2_Controller,
-                                                                  hintText: 'degree',
-                                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                                  validator: (value) {
-                                                                    if (value == null || value.isEmpty) return null;
-
-                                                                    final text = value.trim();
-
-                                                                    if (!RegExp(r'^\d+$').hasMatch(text)) {
-                                                                      return 'กรุณาระบุเป็นจำนวนเต็ม';
-                                                                    }
-
-                                                                    final az = int.parse(text);
-
-                                                                    if (az < 0 || az > 360) {
-                                                                      return 'กรุณาระบุค่า 0 - 360';
-                                                                    }
-
-                                                                    return null;
-                                                                  },
-                                                                  nameWidth: 40,
-                                                                  unit: '°'
-                                                              ),
-                                                            ]
-                                                        )
-                                                    ),
-                                                  )
-                                              ),
-                                            ]
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-
-                                SizedBox(height: 20),
-
-                                Point_Title(title: 'รูปถ่ายประกอบจุดตรวจสอบ'),
-
-                                SizedBox(height: 10),
-
-                                /// รูปถ่ายประกอบจุดตรวจสอบ
-                                GridView.count(
-                                  padding: EdgeInsets.zero,
-                                  crossAxisCount: 2, // 2 ช่องต่อแถว
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  crossAxisSpacing: 10, // ระยะห่าง แนวนอน (ซ้าย-ขวา)
-                                  mainAxisSpacing: 10, // ระยะห่าง แนวตั้ง (บน-ล่าง)
-                                  childAspectRatio: 1.1, // อัตราส่วน กว้าง : สูง ของแต่ละช่อง
-                                  children: [
-
-                                    _PhotoBox(
-                                      label: 'เลขหมุดรังวัด',
-                                      fieldKey: 'point_survey_img',
-                                      newBytes: point_survey_img,
-                                      serverFilename: widget.point.pointSurveyImg,
-                                      onTap: () => _showSourcePicker(
-                                        title: 'เลขหมุดรังวัด',
-                                        ratioX: 4,
-                                        ratioY: 3,
-                                        onPicked: (b) => setState(() {
-                                          point_survey_img = b;
-                                          _removedImageFields.remove('point_survey_img');
-                                        }),
-                                      ),
-                                      onDeleteNew: () => setState(() => point_survey_img = null),
-                                    ),
-
-                                    _PhotoBox(
-                                      label: 'หน้าเครื่อง Controller',
-                                      fieldKey: 'point_controller_img',
-                                      newBytes: point_controller_img,
-                                      serverFilename: widget.point.pointControllerImg,
-                                      onTap: () => _showSourcePicker(
-                                        title: 'หน้าเครื่อง Controller',
-                                        ratioX: 4,
-                                        ratioY: 3,
-                                        onPicked: (b) => setState(() {
-                                          point_controller_img = b;
-                                          _removedImageFields.remove('point_controller_img');
-                                        }),
-                                      ),
-                                      onDeleteNew: () => setState(() => point_controller_img = null),
-                                    ),
-
-                                    _PhotoBox(
-                                      label: 'ทิศเหนือ',
-                                      fieldKey: 'n_survey_img',
-                                      newBytes: n_survey_img,
-                                      serverFilename: widget.point.nSurveyImg,
-                                      onTap: () => _showSourcePicker(
-                                        title: 'ทิศเหนือ',
-                                        ratioX: 4,
-                                        ratioY: 3,
-                                        onPicked: (b) => setState(() {
-                                          n_survey_img = b;
-                                          _removedImageFields.remove('n_survey_img');
-                                        }),
-                                      ),
-                                      onDeleteNew: () => setState(() => n_survey_img = null),
-                                    ),
-
-                                    _PhotoBox(
-                                      label: 'ทิศใต้',
-                                      fieldKey: 's_survey_img',
-                                      newBytes: s_survey_img,
-                                      serverFilename: widget.point.sSurveyImg,
-                                      onTap: () => _showSourcePicker(
-                                        title: 'ทิศใต้',
-                                        ratioX: 4,
-                                        ratioY: 3,
-                                        onPicked: (b) => setState(() {
-                                          s_survey_img = b;
-                                          _removedImageFields.remove('s_survey_img');
-                                        }),
-                                      ),
-                                      onDeleteNew: () => setState(() => s_survey_img = null),
-                                    ),
-
-                                    _PhotoBox(
-                                      label: 'ทิศตะวันออก',
-                                      fieldKey: 'e_survey_img',
-                                      newBytes: e_survey_img,
-                                      serverFilename: widget.point.eSurveyImg,
-                                      onTap: () => _showSourcePicker(
-                                        title: 'ทิศตะวันออก',
-                                        ratioX: 4,
-                                        ratioY: 3,
-                                        onPicked: (b) => setState(() {
-                                          e_survey_img = b;
-                                          _removedImageFields.remove('e_survey_img');
-                                        }),
-                                      ),
-                                      onDeleteNew: () => setState(() => e_survey_img = null),
-                                    ),
-
-                                    _PhotoBox(
-                                      label: 'ทิศตะวันตก',
-                                      fieldKey: 'w_survey_img',
-                                      newBytes: w_survey_img,
-                                      serverFilename: widget.point.wSurveyImg,
-                                      onTap: () => _showSourcePicker(
-                                        title: 'ทิศตะวันตก',
-                                        ratioX: 4,
-                                        ratioY: 3,
-                                        onPicked: (b) => setState(() {
-                                          w_survey_img = b;
-                                          _removedImageFields.remove('w_survey_img');
-                                        }),
-                                      ),
-                                      onDeleteNew: () => setState(() => w_survey_img = null),
-                                    ),
-
-                                  ],
-                                ),
-
-                                SizedBox(height: 20),
-
-                                Point_Title(title: 'รายละเอียดเพิ่มเติม'),
-
-                                SizedBox(height: 10),
-
-                                /// Box รายละเอียดเพิ่มเติม
-                                ValueListenableBuilder<Box<SavedDrawing>>(
-                                  valueListenable: noteBox.listenable(),
-                                  builder: (_, __, ___) => _buildNoteBox(),
-                                ),
-
-                                SizedBox(height: 20),
-
-                                /// ชื่อหมุดรังวัด
-                                point_text_field_column_c5_edit(
-                                  name: 'รายละเอียดเพิ่มเติม',
-                                  controller: point_note_Controller,
-                                  hintText: '-',
-                                  keyboardType: TextInputType.multiline,
-                                  maxLines: null,
-                                  minLines: 5,
-                                  validator: (value) {
-
-                                  },
-                                ),
-
-                                SizedBox(height: 10),
-
-                                /// ผู้รังวัด / ผู้ตรวจสอบ
-                                Row(
-                                    children: [
-
-                                      Expanded(
-                                          child: _UserPickerField(
-                                            label: 'ผู้รังวัด',
-                                            selectedUser: survey_technician,
-                                            onTap: () => _edit_showUserPicker(
-                                                title: 'ยืนยันการเป็นผู้รังวัด',
-                                                current: survey_technician,
-                                                onConfirm: (u) => setState(() => survey_technician = u)
-                                            ),
-                                            onClear: () => setState(() => survey_technician = null
-                                            ),
-                                          )
-                                      ),
-
-                                      SizedBox(width: 10),
-
-                                      Expanded(
-                                          child: _UserPickerField(
-                                            label: 'ผู้ตรวจสอบ',
-                                            selectedUser: _qc,
-                                            onTap: () => _edit_showUserPicker(
-                                                title: 'ยืนยันการเป็นผู้ตรวจสอบ',
-                                                current: _qc, onConfirm: (u) => setState(() => _qc = u)
-                                            ),
-                                            onClear: () => setState(() => _qc = null),
-                                          )
-                                      ),
-
-                                    ]
-                                ),
-
-                                SizedBox(height: 20),
-
-                              ],
-                            )
+                                ],
+                              )
                           ),
                         ),
                       ),
@@ -2699,8 +2703,7 @@ class _UserPickerField extends StatelessWidget {
                     radius: 16,
                     backgroundColor: Colors.grey.shade200,
                     backgroundImage: selectedUser!.profileImg != null
-                        ? NetworkImage(
-                        '${Constants.backendUri}/uploads/profiles/${selectedUser!.profileImg}')
+                        ? NetworkImage(SecureImage.profileUrl(selectedUser!.profileImg), headers: SecureImage.authHeaders)
                         : null,
                     child: selectedUser!.profileImg == null
                         ? const Icon(Icons.person, size: 18, color: Colors.grey)
@@ -2979,8 +2982,7 @@ class _UserTile extends StatelessWidget {
               radius: 24,
               backgroundColor: Colors.grey.shade200,
               backgroundImage: user.profileImg != null
-                  ? NetworkImage(
-                  '${Constants.backendUri}/uploads/profiles/${user.profileImg}')
+                  ? NetworkImage(SecureImage.profileUrl(user.profileImg), headers: SecureImage.authHeaders)
                   : null,
               child: user.profileImg == null
                   ? const Icon(Icons.person,

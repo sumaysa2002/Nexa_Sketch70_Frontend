@@ -21,7 +21,7 @@ class _Point_Detail_Viewer_PageState extends State<Point_Detail_Viewer_Page> {
   // รูป signature
   String? _sigUrl(String? filename) {
     if (filename == null) return null;
-    return '${Constants.backendUri}/uploads/signatures/$filename';
+    return SecureImage.signatureUrl(filename);
   }
 
   UserModel? _technician;
@@ -900,7 +900,7 @@ class _ImgBox extends StatelessWidget {
   String get _localPath => rawValue!.replaceFirst('local://', '');
 
   String get _networkUrl =>
-      '${Constants.backendUri}/uploads/point/$projectId/$pointId/$rawValue';
+      SecureImage.pointUrl(projectId, pointId, rawValue!);
 
   @override
   Widget build(BuildContext context) {
@@ -917,7 +917,7 @@ class _ImgBox extends StatelessWidget {
                 child: InteractiveViewer(
                   child: _isLocal
                       ? Image.file(File(_localPath), fit: BoxFit.contain)
-                      : Image.network(_networkUrl, fit: BoxFit.contain),
+                      : Image.network(_networkUrl, headers: SecureImage.headers(context), fit: BoxFit.contain),
                 ),
               ),
               Positioned(
@@ -1002,6 +1002,7 @@ class _ImgBox extends StatelessWidget {
                 )
                     : Image.network(
                   _networkUrl,
+                  headers: SecureImage.headers(context),
                   fit: BoxFit.cover,
                   loadingBuilder: (_, child, progress) {
                     if (progress == null) return child;
@@ -1098,6 +1099,7 @@ class _UserSignatureBox extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
                   sigUrl!,
+                  headers: SecureImage.headers(context),
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Center(
                     child: Icon(Icons.draw_outlined, color: Colors.grey, size: 28),

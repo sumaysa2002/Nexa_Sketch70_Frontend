@@ -124,8 +124,7 @@ class _Admin_Home_PageState extends State<Admin_Home_Page> {
                                   ),
                                   child: CircleAvatar(
                                     radius: 35,
-                                    backgroundImage: NetworkImage(
-                                      "${Constants.backendUri}/uploads/profiles/${user.profileImg}",
+                                    backgroundImage: NetworkImage(SecureImage.profileUrl(user.profileImg), headers: SecureImage.authHeaders,
                                     ),
                                   ),
                                 ),

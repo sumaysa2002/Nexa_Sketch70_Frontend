@@ -109,8 +109,7 @@ class _Profile_PageState extends State<Profile_Page> {
                                 child: Container(
                                   color: const Color(0xFFF3F3F3),
                                   child: user.profileImg != null
-                                      ? Image.network(
-                                    "${Constants.backendUri}/uploads/profiles/${user.profileImg}",
+                                      ? Image.network(SecureImage.profileUrl(user.profileImg), headers: SecureImage.authHeaders,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => Icon(
                                       Icons.person,

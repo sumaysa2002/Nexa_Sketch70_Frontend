@@ -90,27 +90,27 @@ class _Profile_Edit_PageState extends State<Profile_Edit_Page> {
             const SizedBox(height: 10),
 
             ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const w_text_thai_notosansthai(
-                  name: "ถ่ายภาพ",
-                  font_Size: 16
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera);
-              }
+                leading: const Icon(Icons.camera_alt),
+                title: const w_text_thai_notosansthai(
+                    name: "ถ่ายภาพ",
+                    font_Size: 16
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                }
             ),
 
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const w_text_thai_notosansthai(
-                  name: "เลือกจากแกลอรี่",
-                  font_Size: 16
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
-              }
+                leading: const Icon(Icons.photo_library),
+                title: const w_text_thai_notosansthai(
+                    name: "เลือกจากแกลอรี่",
+                    font_Size: 16
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                }
             ),
 
           ],
@@ -175,6 +175,9 @@ class _Profile_Edit_PageState extends State<Profile_Edit_Page> {
       CroppedFile? croppedFile = await ImageCropper().cropImage(
         sourcePath: pickedFile.path,
         aspectRatio: const CropAspectRatio(ratioX: 2, ratioY: 1),
+        compressQuality: 90,
+        maxWidth: 1000,
+        maxHeight: 500,
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Signature',
@@ -368,7 +371,7 @@ class _Profile_Edit_PageState extends State<Profile_Edit_Page> {
                                     backgroundImage: _newProfileImage != null
                                         ? MemoryImage(_newProfileImage!)
                                         : (context.read<AuthCubit>().state as AuthLoggedIn).userModel.profileImg != null
-                                        ? NetworkImage("${Constants.backendUri}/uploads/profiles/${(context.read<AuthCubit>().state as AuthLoggedIn).userModel.profileImg}") as ImageProvider
+                                        ? NetworkImage(SecureImage.profileUrl((context.read<AuthCubit>().state as AuthLoggedIn).userModel.profileImg), headers: SecureImage.authHeaders) as ImageProvider
                                         : null,
                                     child: (_newProfileImage == null && (context.read<AuthCubit>().state as AuthLoggedIn).userModel.profileImg == null)
                                         ? const Icon(Icons.person, size: 55, color: Colors.grey)
@@ -518,8 +521,7 @@ class _Profile_Edit_PageState extends State<Profile_Edit_Page> {
                                               child: _newSignatureImage != null
                                                   ? Image.memory(_newSignatureImage!, fit: BoxFit.contain) // แสดงรูปที่เพิ่งตัด
                                                   : (user.signature != null
-                                                  ? Image.network(
-                                                "${Constants.backendUri}/uploads/signatures/${user.signature}",
+                                                  ? Image.network(SecureImage.signatureUrl(user.signature), headers: SecureImage.authHeaders,
                                                 fit: BoxFit.contain,
                                                 errorBuilder: (context, error, stackTrace) =>
                                                 const Center(

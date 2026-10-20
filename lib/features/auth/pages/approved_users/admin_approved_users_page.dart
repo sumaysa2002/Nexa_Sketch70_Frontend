@@ -634,8 +634,7 @@ class _MemberCard extends StatelessWidget {
       radius: radius,
       backgroundColor: Colors.grey.shade200,
       backgroundImage: member.profileImg != null
-          ? NetworkImage(
-          '${Constants.backendUri}/uploads/profiles/${member.profileImg}')
+          ? NetworkImage(SecureImage.profileUrl(member.profileImg), headers: SecureImage.authHeaders)
           : null,
       child: member.profileImg == null
           ? Icon(Icons.person, size: radius * 1.1, color: Colors.grey)
@@ -1095,8 +1094,7 @@ class _SearchResultTile extends StatelessWidget {
             radius: 26,
             backgroundColor: Colors.grey.shade200,
             backgroundImage: user.profileImg != null
-                ? NetworkImage(
-                '${Constants.backendUri}/uploads/profiles/${user.profileImg}')
+                ? NetworkImage(SecureImage.profileUrl(user.profileImg), headers: SecureImage.authHeaders)
                 : null,
             child: user.profileImg == null
                 ? const Icon(Icons.person, size: 28, color: Colors.grey)

@@ -34,6 +34,7 @@ export 'package:offline_gnss69_new/main.dart';
 export 'package:offline_gnss69_new/core/constants/constants.dart';
 export 'package:offline_gnss69_new/core/services/app_exception.dart';
 export 'package:offline_gnss69_new/core/services/pending_point_image_service.dart';
+export 'package:offline_gnss69_new/core/services/secure_image.dart';
 export 'package:offline_gnss69_new/core/services/sp_service.dart';
 export 'package:offline_gnss69_new/core/services/thai_address_service.dart';
 

@@ -281,8 +281,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                   backgroundColor: const Color(0xFF18181C),
                   avatar: CircleAvatar(
                     backgroundImage: member.profileImg != null
-                        ? NetworkImage(
-                        "${Constants.backendUri}/uploads/profiles/${member.profileImg}")
+                        ? NetworkImage(SecureImage.profileUrl(member.profileImg), headers: SecureImage.authHeaders)
                         : null,
                     backgroundColor: Colors.grey.shade300,
                     child: member.profileImg == null
@@ -399,33 +398,33 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<TaskCubit, TaskState>(
-        listener: (context, state) {
+      listener: (context, state) {
 
-          /// สร้างโครงการสำเร็จ
-          if (state is CreateProjectSuccess) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) =>
-              alert_image_one_button(
-                  text: "สร้างโครงการสำเร็จ",
-                  assets_image: "assets/images/checkmark.png",
-                  onPressed : () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
-                  },
-                  text_button: "ตกลง"
-              ),
-            );
-          } else if (state is ProjectError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
+        /// สร้างโครงการสำเร็จ
+        if (state is CreateProjectSuccess) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) =>
+                alert_image_one_button(
+                    text: "สร้างโครงการสำเร็จ",
+                    assets_image: "assets/images/checkmark.png",
+                    onPressed : () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    },
+                    text_button: "ตกลง"
+                ),
+          );
+        } else if (state is ProjectError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
 
       child: Scaffold(
           body: Container(
@@ -446,14 +445,14 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                 ],
               ),
             ),
-      
+
             child: SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
 
                   const SizedBox(height: 20),
-      
+
                   w_text_big(
                       name: 'Create New Project!',
                       font_Size: 36,
@@ -462,7 +461,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                   ),
 
                   const SizedBox(height: 40),
-      
+
                   Expanded(
                       child: Stack(
                         clipBehavior: Clip.none,
@@ -484,7 +483,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                 key: formKey,
                                 child: Column(
                                   children: [
-      
+
                                     Row(
                                       children: [
                                         SizedBox(
@@ -494,13 +493,13 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                             controller: name_project_id_Controller,
                                             hintText: "Project ID",
                                             validator: (value) {
-      
+
                                             },
                                           ),
                                         ),
 
                                         const SizedBox(width: 10.0),
-      
+
                                         Expanded(
                                           child: text_field_column_c5(
                                             name: "ชื่อโครงการ",
@@ -519,22 +518,22 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                     ),
 
                                     const SizedBox(height: 10.0),
-      
+
                                     text_field_column_c5(
                                       name: "รายละเอียดโครงการ",
                                       controller: project_details_Controller,
                                       hintText: "รายละเอียดโครงการ",
                                       validator: (value) {
-      
+
                                       },
                                     ),
 
                                     const SizedBox(height: 10.0),
-      
+
                                     provinceSelector(context, setState),
 
                                     const SizedBox(height: 25.0),
-      
+
                                     Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
@@ -575,7 +574,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                         ),
 
                                         const SizedBox(width: 10.0),
-      
+
                                         SizedBox(
                                           width: 120,
                                           child: dropdown_field_c5(
@@ -594,7 +593,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                     ),
 
                                     const SizedBox(height: 10.0),
-      
+
                                     Row(
                                       children: [
                                         Expanded(
@@ -612,7 +611,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                         ),
 
                                         const SizedBox(width: 10.0),
-      
+
                                         Expanded(
                                           child: dropdown_field_c5(
                                             name: "วิธีการรังวัดย่อย",
@@ -633,7 +632,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                     ),
 
                                     const SizedBox(height: 10.0),
-      
+
                                     Row(
                                       children: [
                                         Expanded(
@@ -645,7 +644,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                         ),
 
                                         const SizedBox(width: 10.0),
-      
+
                                         Expanded(
                                           child: text_field_date_column(
                                             name: "วันสิ้นสุดการสำรวจ",
@@ -657,7 +656,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                     ),
 
                                     const SizedBox(height: 10.0),
-      
+
                                     Row(
                                       children: [
                                         Expanded(
@@ -668,7 +667,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                         ),
 
                                         const SizedBox(width: 20.0),
-      
+
                                         Expanded(
                                           child: Calendar(
                                             Date_name: end_date,
@@ -679,18 +678,18 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                     ),
 
                                     const SizedBox(height: 25.0),
-      
+
                                     /// Member Selector
                                     memberSelector(context, setState),
 
                                     const SizedBox(height: 20.0),
-      
+
                                     text_field_column_c5(
                                       name: "หมายเหตุเพิ่มเติม",
                                       controller: project_note_Controller,
                                       hintText: "-",
                                       validator: (value) {
-      
+
                                       },
                                     ),
 
@@ -749,8 +748,8 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
 
                                       ],
                                     )
-      
-      
+
+
                                   ],
                                 ),
                               ),
@@ -1048,8 +1047,7 @@ class _UserTile extends StatelessWidget {
               radius: 26,
               backgroundColor: Colors.grey.shade200,
               backgroundImage: user.profileImg != null
-                  ? NetworkImage(
-                  "${Constants.backendUri}/uploads/profiles/${user.profileImg}")
+                  ? NetworkImage(SecureImage.profileUrl(user.profileImg), headers: SecureImage.authHeaders)
                   : null,
               child: user.profileImg == null
                   ? const Icon(Icons.person, size: 28, color: Colors.grey)
@@ -1180,4 +1178,3 @@ class text_field_date_column extends StatelessWidget {
     );
   }
 }
-

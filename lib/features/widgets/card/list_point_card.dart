@@ -15,7 +15,7 @@ class List_Point_Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final picUrl = point.pointZoominImg != null
-        ? '${Constants.backendUri}/uploads/point/${point.projectId}/${point.id}/${point.pointZoominImg}'
+        ? SecureImage.pointUrl(point.projectId, point.id, point.pointZoominImg!)
         : null;
 
     return GestureDetector(
@@ -121,6 +121,7 @@ class List_Point_Card extends StatelessWidget {
                         child: picUrl != null
                             ? Image.network(
                           picUrl,
+                          headers: SecureImage.headers(context),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _placeholder(),
                         )

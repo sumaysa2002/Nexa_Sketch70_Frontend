@@ -461,8 +461,8 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
 
                     // download project
                     circle_icon_button(
-                        icon: Icons.save_alt,
-                        onTap: _onExportTap,
+                      icon: Icons.save_alt,
+                      onTap: _onExportTap,
                     ),
 
                     const SizedBox(width: 8),
@@ -1077,8 +1077,7 @@ class _ProfileAvatar extends StatelessWidget {
       radius: radius,
       backgroundColor: Colors.grey.shade200,
       backgroundImage: canLoad
-          ? NetworkImage(
-          '${Constants.backendUri}/uploads/profiles/$profileImg')
+          ? NetworkImage(SecureImage.profileUrl(profileImg), headers: SecureImage.authHeaders)
           : null,
       child: !canLoad
           ? Icon(Icons.person,
