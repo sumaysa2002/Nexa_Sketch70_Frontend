@@ -14,6 +14,9 @@ class Create_New_Project_Page extends StatefulWidget {
 
 class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
 
+  /// ยืนยันก่อนออกจากหน้า
+  bool _allowPop = false;
+
   final formKey = GlobalKey<FormState>();
   final ScrollController _scrollController = ScrollController();
 
@@ -395,373 +398,386 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
   }
 
 
+
+  /// ── ยืนยันก่อนออกจากหน้า ──────────────────
+  Future<void> _confirmLeave() async {
+    FocusScope.of(context).unfocus();
+    final leave = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => alert_image_two_button(
+        text: "ยกเลิกการสร้างโครงการ",
+        assets_image: "assets/images/question.png",
+        one_text_button: "ยกเลิก",
+        one_onPressed: () => Navigator.pop(ctx, false),
+        two_text_button: "ตกลง",
+        two_onPressed: () => Navigator.pop(ctx, true),
+      ),
+    );
+    if (leave == true && mounted) {
+      setState(() => _allowPop = true);
+      Navigator.pop(context);
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<TaskCubit, TaskState>(
-      listener: (context, state) {
-
-        /// สร้างโครงการสำเร็จ
-        if (state is CreateProjectSuccess) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) =>
-                alert_image_one_button(
-                    text: "สร้างโครงการสำเร็จ",
-                    assets_image: "assets/images/checkmark.png",
-                    onPressed : () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).pop();
-                    },
-                    text_button: "ตกลง"
-                ),
-          );
-        } else if (state is ProjectError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.error),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
       },
+      child: BlocListener<TaskCubit, TaskState>(
+        listener: (context, state) {
 
-      child: Scaffold(
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF505050),
-                  Color(0xFF18181C),
-                  Color(0xFF505050),
-                  Color(0xFF505050),
-                  Color(0xFF505050),
-                  Color(0xFF505050),
-                  Color(0xFF505050),
-                ],
-              ),
-            ),
-
-            child: SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-
-                  const SizedBox(height: 20),
-
-                  w_text_big(
-                      name: 'Create New Project!',
-                      font_Size: 36,
-                      color: Colors.white,
-                      shadow_color: Colors.black
+          /// สร้างโครงการสำเร็จ
+          if (state is CreateProjectSuccess) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) =>
+                  alert_image_one_button(
+                      text: "สร้างโครงการสำเร็จ",
+                      assets_image: "assets/images/checkmark.png",
+                      onPressed : () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                      },
+                      text_button: "ตกลง"
                   ),
+            );
+          } else if (state is ProjectError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
 
-                  const SizedBox(height: 40),
+        child: Scaffold(
+            body: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFF505050),
+                    Color(0xFF18181C),
+                    Color(0xFF505050),
+                    Color(0xFF505050),
+                    Color(0xFF505050),
+                    Color(0xFF505050),
+                    Color(0xFF505050),
+                  ],
+                ),
+              ),
 
-                  Expanded(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            height: double.infinity,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(30),
-                                topRight: Radius.circular(30),
+              child: SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+
+                    const SizedBox(height: 20),
+
+                    w_text_big(
+                        name: 'Create New Project!',
+                        font_Size: 36,
+                        color: Colors.white,
+                        shadow_color: Colors.black
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    Expanded(
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              height: double.infinity,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(30),
+                                  topRight: Radius.circular(30),
+                                ),
                               ),
-                            ),
-                            child: SingleChildScrollView(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.fromLTRB(40, 40, 40, 40),
-                              child: Form(
-                                key: formKey,
-                                child: Column(
-                                  children: [
+                              child: SingleChildScrollView(
+                                controller: _scrollController,
+                                padding: const EdgeInsets.fromLTRB(40, 40, 40, 40),
+                                child: Form(
+                                  key: formKey,
+                                  child: Column(
+                                    children: [
 
-                                    Row(
-                                      children: [
-                                        SizedBox(
-                                          width: 120,
-                                          child: text_field_column_c5(
-                                            name: "ID โครงการ",
-                                            controller: name_project_id_Controller,
-                                            hintText: "Project ID",
-                                            validator: (value) {
+                                      Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 120,
+                                            child: text_field_column_c5(
+                                              name: "ID โครงการ",
+                                              controller: name_project_id_Controller,
+                                              hintText: "Project ID",
+                                              validator: (value) {
 
-                                            },
+                                              },
+                                            ),
                                           ),
-                                        ),
 
-                                        const SizedBox(width: 10.0),
+                                          const SizedBox(width: 10.0),
 
-                                        Expanded(
-                                          child: text_field_column_c5(
-                                            name: "ชื่อโครงการ",
-                                            controller: project_name_Controller,
-                                            hintText: "Name",
-                                            validator: (value) {
-                                              if (value == null ||
-                                                  value.isEmpty) {
-                                                return 'กรุณาระบุชื่อโครงการ';
-                                              }
-                                              return null;
-                                            },
-                                          ),
-                                        )
-                                      ],
-                                    ),
-
-                                    const SizedBox(height: 10.0),
-
-                                    text_field_column_c5(
-                                      name: "รายละเอียดโครงการ",
-                                      controller: project_details_Controller,
-                                      hintText: "รายละเอียดโครงการ",
-                                      validator: (value) {
-
-                                      },
-                                    ),
-
-                                    const SizedBox(height: 10.0),
-
-                                    provinceSelector(context, setState),
-
-                                    const SizedBox(height: 25.0),
-
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: dropdown_field_c5(
-                                            name: "Sensor",
-                                            hintText: "Sensor",
-                                            value: sensor,
-                                            items: ['Satellites', 'UAVs', 'MMS'],
-                                            onChanged: (val) {
-                                              setState(() {
-                                                sensor = val;
-                                              });
-                                            },
-                                          ),
-                                        ),
-
-                                        const SizedBox(width: 10.0),
-
-                                        Expanded(
-                                          child: text_field_column_c5(
-                                            name: "Ground Sample Distance (GSD)",
-                                            controller: gsd_num_Controller,
-                                            hintText: "กรอกค่า GSD",
-                                            keyboardType: TextInputType.number,
-                                            inputFormatters: [
-                                              FilteringTextInputFormatter.digitsOnly,
-                                            ],
-                                            validator: (value) {
-                                              if (value != null && value.isNotEmpty) {
-                                                if (int.tryParse(value) == null) {
-                                                  return 'กรุณาระบุเป็นจำนวนเต็มเท่านั้น';
+                                          Expanded(
+                                            child: text_field_column_c5(
+                                              name: "ชื่อโครงการ",
+                                              controller: project_name_Controller,
+                                              hintText: "Name",
+                                              validator: (value) {
+                                                if (value == null ||
+                                                    value.isEmpty) {
+                                                  return 'กรุณาระบุชื่อโครงการ';
                                                 }
-                                              }
-                                              return null;
-                                            },
+                                                return null;
+                                              },
+                                            ),
+                                          )
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 10.0),
+
+                                      text_field_column_c5(
+                                        name: "รายละเอียดโครงการ",
+                                        controller: project_details_Controller,
+                                        hintText: "รายละเอียดโครงการ",
+                                        validator: (value) {
+
+                                        },
+                                      ),
+
+                                      const SizedBox(height: 10.0),
+
+                                      provinceSelector(context, setState),
+
+                                      const SizedBox(height: 25.0),
+
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: dropdown_field_c5(
+                                              name: "Sensor",
+                                              hintText: "Sensor",
+                                              value: sensor,
+                                              items: ['Satellites', 'UAVs', 'MMS'],
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  sensor = val;
+                                                });
+                                              },
+                                            ),
                                           ),
-                                        ),
 
-                                        const SizedBox(width: 10.0),
+                                          const SizedBox(width: 10.0),
 
-                                        SizedBox(
-                                          width: 120,
-                                          child: dropdown_field_c5(
-                                            name: "",
-                                            hintText: "หน่วย",
-                                            value: gsd_unit,
-                                            items: ['cm.', 'm.'],
-                                            onChanged: (val) {
-                                              setState(() {
-                                                gsd_unit = val;
-                                              });
-                                            },
+                                          Expanded(
+                                            child: text_field_column_c5(
+                                              name: "Ground Sample Distance (GSD)",
+                                              controller: gsd_num_Controller,
+                                              hintText: "กรอกค่า GSD",
+                                              keyboardType: TextInputType.number,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter.digitsOnly,
+                                              ],
+                                              validator: (value) {
+                                                if (value != null && value.isNotEmpty) {
+                                                  if (int.tryParse(value) == null) {
+                                                    return 'กรุณาระบุเป็นจำนวนเต็มเท่านั้น';
+                                                  }
+                                                }
+                                                return null;
+                                              },
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
 
-                                    const SizedBox(height: 10.0),
+                                          const SizedBox(width: 10.0),
 
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: dropdown_field_c5(
-                                            name: "วิธีการรังวัดหลัก",
-                                            value: survey_main,
-                                            items: ['Static', 'Kinematic'],
-                                            onChanged: (val) {
-                                              setState(() {
-                                                survey_main = val;
-                                                survey_sub = null;
-                                              });
-                                            },
+                                          SizedBox(
+                                            width: 120,
+                                            child: dropdown_field_c5(
+                                              name: "",
+                                              hintText: "หน่วย",
+                                              value: gsd_unit,
+                                              items: ['cm.', 'm.'],
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  gsd_unit = val;
+                                                });
+                                              },
+                                            ),
                                           ),
-                                        ),
+                                        ],
+                                      ),
 
-                                        const SizedBox(width: 10.0),
+                                      const SizedBox(height: 10.0),
 
-                                        Expanded(
-                                          child: dropdown_field_c5(
-                                            name: "วิธีการรังวัดย่อย",
-                                            value: survey_sub,
-                                            items: survey_main == 'Static'
-                                                ? ['Static', 'Fast Static']
-                                                : survey_main == 'Kinematic'
-                                                ? ['RTK', 'NRTK']
-                                                : [],
-                                            onChanged: (val) {
-                                              setState(() {
-                                                survey_sub = val;
-                                              });
-                                            },
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: dropdown_field_c5(
+                                              name: "วิธีการรังวัดหลัก",
+                                              value: survey_main,
+                                              items: ['Static', 'Kinematic'],
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  survey_main = val;
+                                                  survey_sub = null;
+                                                });
+                                              },
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
 
-                                    const SizedBox(height: 10.0),
+                                          const SizedBox(width: 10.0),
 
-                                    Row(
-                                      children: [
-                                        Expanded(
+                                          Expanded(
+                                            child: dropdown_field_c5(
+                                              name: "วิธีการรังวัดย่อย",
+                                              value: survey_sub,
+                                              items: survey_main == 'Static'
+                                                  ? ['Static', 'Fast Static']
+                                                  : survey_main == 'Kinematic'
+                                                  ? ['RTK', 'NRTK']
+                                                  : [],
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  survey_sub = val;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 10.0),
+
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                              child: text_field_date_column(
+                                                name: "วันเริ่มต้นการสำรวจ",
+                                                hint_Text: start_date.toString().split(" ")[0],
+                                                controller: project_start_date_Controller,
+                                              )
+                                          ),
+
+                                          const SizedBox(width: 10.0),
+
+                                          Expanded(
                                             child: text_field_date_column(
-                                              name: "วันเริ่มต้นการสำรวจ",
-                                              hint_Text: start_date.toString().split(" ")[0],
-                                              controller: project_start_date_Controller,
-                                            )
-                                        ),
-
-                                        const SizedBox(width: 10.0),
-
-                                        Expanded(
-                                          child: text_field_date_column(
-                                            name: "วันสิ้นสุดการสำรวจ",
-                                            hint_Text: end_date.toString().split(" ")[0],
-                                            controller: project_end_date_Controller,
+                                              name: "วันสิ้นสุดการสำรวจ",
+                                              hint_Text: end_date.toString().split(" ")[0],
+                                              controller: project_end_date_Controller,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
+                                        ],
+                                      ),
 
-                                    const SizedBox(height: 10.0),
+                                      const SizedBox(height: 10.0),
 
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Calendar(
-                                            Date_name: start_date,
-                                            Date_Selected: start_date_Selected,
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Calendar(
+                                              Date_name: start_date,
+                                              Date_Selected: start_date_Selected,
+                                            ),
                                           ),
-                                        ),
 
-                                        const SizedBox(width: 20.0),
+                                          const SizedBox(width: 20.0),
 
-                                        Expanded(
-                                          child: Calendar(
-                                            Date_name: end_date,
-                                            Date_Selected: end_date_Selected,
+                                          Expanded(
+                                            child: Calendar(
+                                              Date_name: end_date,
+                                              Date_Selected: end_date_Selected,
+                                            ),
+                                          )
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 25.0),
+
+                                      /// Member Selector
+                                      memberSelector(context, setState),
+
+                                      const SizedBox(height: 20.0),
+
+                                      text_field_column_c5(
+                                        name: "หมายเหตุเพิ่มเติม",
+                                        controller: project_note_Controller,
+                                        hintText: "-",
+                                        validator: (value) {
+
+                                        },
+                                      ),
+
+                                      const SizedBox(height: 30.0),
+
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+
+                                          SizedBox(
+                                            width: MediaQuery.of(context).size.width / 2.5,
+                                            child: button_icon(
+                                              name: 'Cancel',
+                                              name_size: 16,
+                                              icon: Icons.close,
+                                              icon_size: 20,
+                                              onPressed: _confirmLeave,
+                                            ),
                                           ),
-                                        )
-                                      ],
-                                    ),
 
-                                    const SizedBox(height: 25.0),
+                                          const SizedBox(width: 10.0),
 
-                                    /// Member Selector
-                                    memberSelector(context, setState),
-
-                                    const SizedBox(height: 20.0),
-
-                                    text_field_column_c5(
-                                      name: "หมายเหตุเพิ่มเติม",
-                                      controller: project_note_Controller,
-                                      hintText: "-",
-                                      validator: (value) {
-
-                                      },
-                                    ),
-
-                                    const SizedBox(height: 30.0),
-
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-
-                                        SizedBox(
-                                          width: MediaQuery.of(context).size.width / 2.5,
-                                          child: button_icon(
-                                            name: 'Cancel',
-                                            name_size: 16,
-                                            icon: Icons.close,
-                                            icon_size: 20,
-                                            onPressed: () {
-                                              showDialog(
-                                                context: context,
-                                                barrierDismissible: false,
-                                                builder: (_) => alert_image_two_button(
-                                                  text: "ยกเลิกการสร้างโครงการ",
-                                                  assets_image: "assets/images/question.png",
-                                                  one_text_button: "ยกเลิก",
-                                                  one_onPressed: () => Navigator.of(context).pop(),
-                                                  two_text_button: "ตกลง",
-                                                  two_onPressed: () {
-                                                    Navigator.of(context).pop();
-                                                    Navigator.of(context).pop();
-                                                  },
+                                          BlocBuilder<TaskCubit, TaskState>(
+                                            builder: (context, state) {
+                                              final isLoading = state is ProjectLoading;
+                                              return SizedBox(
+                                                width: MediaQuery.of(context).size.width / 2.5,
+                                                child: isLoading
+                                                    ? const Center(child: CircularProgressIndicator())
+                                                    : button_icon(
+                                                  name: 'Create New Project',
+                                                  name_size: 16,
+                                                  icon: Icons.add,
+                                                  icon_size: 20,
+                                                  onPressed: check_Create_New_Project,
                                                 ),
                                               );
                                             },
                                           ),
-                                        ),
 
-                                        const SizedBox(width: 10.0),
-
-                                        BlocBuilder<TaskCubit, TaskState>(
-                                          builder: (context, state) {
-                                            final isLoading = state is ProjectLoading;
-                                            return SizedBox(
-                                              width: MediaQuery.of(context).size.width / 2.5,
-                                              child: isLoading
-                                                  ? const Center(child: CircularProgressIndicator())
-                                                  : button_icon(
-                                                name: 'Create New Project',
-                                                name_size: 16,
-                                                icon: Icons.add,
-                                                icon_size: 20,
-                                                onPressed: check_Create_New_Project,
-                                              ),
-                                            );
-                                          },
-                                        ),
-
-                                      ],
-                                    )
+                                        ],
+                                      )
 
 
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          )
-                        ],
-                      )
-                  ),
-                ],
+                            )
+                          ],
+                        )
+                    ),
+                  ],
+                ),
               ),
-            ),
-          )
+            )
+        ),
       ),
     );
   }

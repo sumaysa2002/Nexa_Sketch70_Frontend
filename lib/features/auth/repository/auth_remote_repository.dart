@@ -285,8 +285,8 @@ class AuthRemoteRepository {
       request.files.add(http.MultipartFile.fromBytes(
         'signature_image',
         signatureImage,
-        filename: 'signature.jpg',
-        contentType: MediaType('image', 'jpeg'),
+        filename: 'signature.png',
+        contentType: MediaType('image', 'png'),
       ));
     }
 

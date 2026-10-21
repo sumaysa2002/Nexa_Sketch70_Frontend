@@ -128,6 +128,9 @@ class _Note_CreateNewPointState extends State<Note_CreateNewPoint> {
   // เพิ่มตัวแปรนับจำนวนนิ้ว
   int _pointerCount = 0;
 
+  // อนุญาตให้ออกจากหน้าได้ทันที (ใช้หลังบันทึกสำเร็จ ไม่ต้องถามยืนยัน)
+  bool _allowPop = false;
+
 
   @override
   void dispose() {
@@ -1388,6 +1391,27 @@ class _Note_CreateNewPointState extends State<Note_CreateNewPoint> {
 
 
 
+  /// ── ยืนยันก่อนออกจากหน้า (ยังไม่ได้บันทึก) ──────────────────
+  Future<void> _confirmLeave() async {
+    FocusScope.of(context).unfocus();
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => alert_image_two_button(
+        text: "ต้องการออกโดยไม่บันทึกรายละเอียดเพิ่มเติม",
+        assets_image: "assets/images/question.png",
+        one_text_button: "ยกเลิก",
+        one_onPressed: () => Navigator.pop(ctx, false),
+        two_text_button: "ตกลง",
+        two_onPressed: () => Navigator.pop(ctx, true),
+      ),
+    );
+    if (leave == true && mounted) {
+      setState(() => _allowPop = true);
+      Navigator.pop(context);
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final double width = MediaQuery
@@ -1400,746 +1424,752 @@ class _Note_CreateNewPointState extends State<Note_CreateNewPoint> {
         .height;
     double screenWidth = MediaQuery.of(context).size.width;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.white,
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.white,
 
-      body: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
+        body: Stack(
+          alignment: Alignment.center,
+          children: <Widget>[
 
-          Positioned(
-            top: 200,
-            left: -(screenWidth * 0.5),
-            child: Container(
-              width: screenWidth * 2,
-              height: screenWidth * 2,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFF505050),
-                    Color(0xFF18181C)
-                  ],
-                ),
-
-              ),
-            ),
-          ),
-
-          /// Bar
-          Positioned(
-            top: 20,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
+            Positioned(
+              top: 200,
+              left: -(screenWidth * 0.5),
               child: Container(
-                height: kToolbarHeight,
-                child: Row(
-                  children: [
+                width: screenWidth * 2,
+                height: screenWidth * 2,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
 
-                    IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new_outlined,
-                          color: Colors.grey),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF505050),
+                      Color(0xFF18181C)
+                    ],
+                  ),
 
-                    Expanded(
-                        child: Center(
-                          child: w_text_thai_notosansthai(
-                            name: 'รายละเอียดเพิ่มเติม',
-                            font_Size: 24,
-                            fontWeight : FontWeight.w700,
-                            color: Colors.black,
-                          ),
-                        )
-                    ),
-
-                    SizedBox(width: 48), // balance icon
-
-                  ],
                 ),
               ),
             ),
-          ),
+
+            /// Bar
+            Positioned(
+              top: 20,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  height: kToolbarHeight,
+                  child: Row(
+                    children: [
+
+                      IconButton(
+                        icon: Icon(Icons.arrow_back_ios_new_outlined,
+                            color: Colors.grey),
+                        onPressed: () => Navigator.maybePop(context),
+                      ),
+
+                      Expanded(
+                          child: Center(
+                            child: w_text_thai_notosansthai(
+                              name: 'รายละเอียดเพิ่มเติม',
+                              font_Size: 24,
+                              fontWeight : FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          )
+                      ),
+
+                      SizedBox(width: 48), // balance icon
+
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
 
-          SafeArea(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
+            SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
 
-                  /// ── Canvas (วาดรูป) ──────────────────────────────────
-                  Listener(
-                    onPointerDown: (_) => setState(() => _pointerCount++),
-                    onPointerUp: (_) => setState(() => _pointerCount--),
-                    onPointerCancel: (_) => setState(() => _pointerCount--),
+                    /// ── Canvas (วาดรูป) ──────────────────────────────────
+                    Listener(
+                      onPointerDown: (_) => setState(() => _pointerCount++),
+                      onPointerUp: (_) => setState(() => _pointerCount--),
+                      onPointerCancel: (_) => setState(() => _pointerCount--),
 
-                    // zoom เข้า - ออก กระดาษ
-                    child: InteractiveViewer(
-                      transformationController: _transformationController,
-                      minScale: 0.5,
-                      maxScale: 5.0,
-                      panEnabled: _pointerCount >= 2,
-                      scaleEnabled: _pointerCount >= 2,
+                      // zoom เข้า - ออก กระดาษ
+                      child: InteractiveViewer(
+                        transformationController: _transformationController,
+                        minScale: 0.5,
+                        maxScale: 5.0,
+                        panEnabled: _pointerCount >= 2,
+                        scaleEnabled: _pointerCount >= 2,
 
-                      child: Container(
-                        width: 650,
-                        height: 650,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.6),
-                                blurRadius: 5.0,
-                                spreadRadius: 1.0,
-                              )
-                            ]
-                        ),
+                        child: Container(
+                          width: 650,
+                          height: 650,
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.6),
+                                  blurRadius: 5.0,
+                                  spreadRadius: 1.0,
+                                )
+                              ]
+                          ),
 
-                        // กระดาษวาดรูป
-                        child: RepaintBoundary(
-                          key: repaintKey,
-                          child: Listener(
+                          // กระดาษวาดรูป
+                          child: RepaintBoundary(
+                            key: repaintKey,
+                            child: Listener(
 
-                            // เปิดโหมดปากกา
-                            onPointerDown: (event) {
-                              if (_stylusOnlyMode && event.kind != PointerDeviceKind.stylus) return;
+                              // เปิดโหมดปากกา
+                              onPointerDown: (event) {
+                                if (_stylusOnlyMode && event.kind != PointerDeviceKind.stylus) return;
 
-                              FocusScope.of(context).unfocus();
-                              setState(() {
-                                for (var t in texts) t['selected'] = false;
-                              });
-
-                              if (!isDrawing) return;
-
-                              final localPosition = event.localPosition;
-
-                              if (drawMode == "free") {
+                                FocusScope.of(context).unfocus();
                                 setState(() {
-                                  points.add(DrawingArea(
-                                    point: localPosition,
-                                    lineStyle: currentLineStyle,
-                                    areaPaint: Paint()
-                                      ..style = PaintingStyle.stroke
-                                      ..strokeCap = StrokeCap.round
-                                      ..isAntiAlias = true
-                                      ..strokeWidth = selectedTool == kToolTypeEraser ? eraserWidth : strokeWidth
-                                      ..color = selectedTool == kToolTypeEraser ? Colors.transparent : selectedColor
-                                      ..blendMode = selectedTool == kToolTypeEraser ? BlendMode.clear : BlendMode.srcOver,
-                                  ));
+                                  for (var t in texts) t['selected'] = false;
                                 });
-                              } else if (drawMode == "line") {
-                                setState(() {
-                                  lineStart = localPosition;
-                                  previewEnd = lineStart;
-                                  linePaintInProgress = Paint()
-                                    ..style = PaintingStyle.stroke
-                                    ..strokeCap = StrokeCap.round
-                                    ..isAntiAlias = true
-                                    ..color = selectedColor
-                                    ..strokeWidth = selectedTool == kToolTypeEraser ? eraserWidth : strokeWidth
-                                    ..blendMode = BlendMode.srcOver;
-                                });
-                              } else if (drawMode == "circle") {
-                                setState(() {
-                                  circleStart = localPosition;
-                                  circleCurrent = localPosition;
-                                });
-                              } else if (drawMode == "square" || drawMode == "triangle") {
-                                setState(() {
-                                  shapeStart = localPosition;
-                                  shapeCurrent = localPosition;
-                                });
-                              } else if (drawMode == "curve") {
-                                setState(() {
-                                  curveStart = localPosition;
-                                  curveEnd = localPosition;
-                                });
-                              }
-                            },
 
+                                if (!isDrawing) return;
 
-                            onPointerMove: (event) {
-                              if (_stylusOnlyMode && event.kind != PointerDeviceKind.stylus) return;
-                              if (!isDrawing) return;
+                                final localPosition = event.localPosition;
 
-                              final localPosition = event.localPosition;
-
-                              if (drawMode == "free") {
-                                setState(() {
-                                  points.add(DrawingArea(
-                                    point: localPosition,
-                                    lineStyle: currentLineStyle,
-                                    areaPaint: Paint()
-                                      ..style = PaintingStyle.stroke
-                                      ..strokeCap = StrokeCap.round
-                                      ..isAntiAlias = true
-                                      ..strokeWidth = selectedTool == kToolTypeEraser ? eraserWidth : strokeWidth
-                                      ..color = selectedTool == kToolTypeEraser ? Colors.transparent : selectedColor
-                                      ..blendMode = selectedTool == kToolTypeEraser ? BlendMode.clear : BlendMode.srcOver,
-                                  ));
-                                });
-                              } else if (drawMode == "line") {
-                                setState(() {
-                                  previewEnd = localPosition;
-                                });
-                              } else if (drawMode == "circle") {
-                                setState(() {
-                                  circleCurrent = localPosition;
-                                });
-                              } else if (drawMode == "square" || drawMode == "triangle") {
-                                setState(() {
-                                  shapeCurrent = localPosition;
-                                });
-                              } else if (drawMode == "curve") {
-                                setState(() {
-                                  curveEnd = localPosition;
-                                });
-                              }
-                            },
-
-                            onPointerUp: (event) {
-                              if (_stylusOnlyMode && event.kind != PointerDeviceKind.stylus) return;
-                              if (!isDrawing) return;
-
-                              if (drawMode == "free") {
-                                setState(() {
-                                  points.add(null);
-                                  _pushHistorySnapshot();
-                                });
-                              } else if (drawMode == "line") {
-                                if (lineStart != null && previewEnd != null && linePaintInProgress != null) {
+                                if (drawMode == "free") {
                                   setState(() {
                                     points.add(DrawingArea(
-                                      point: lineStart!,
-                                      areaPaint: linePaintInProgress!,
+                                      point: localPosition,
                                       lineStyle: currentLineStyle,
+                                      areaPaint: Paint()
+                                        ..style = PaintingStyle.stroke
+                                        ..strokeCap = StrokeCap.round
+                                        ..isAntiAlias = true
+                                        ..strokeWidth = selectedTool == kToolTypeEraser ? eraserWidth : strokeWidth
+                                        ..color = selectedTool == kToolTypeEraser ? Colors.transparent : selectedColor
+                                        ..blendMode = selectedTool == kToolTypeEraser ? BlendMode.clear : BlendMode.srcOver,
                                     ));
+                                  });
+                                } else if (drawMode == "line") {
+                                  setState(() {
+                                    lineStart = localPosition;
+                                    previewEnd = lineStart;
+                                    linePaintInProgress = Paint()
+                                      ..style = PaintingStyle.stroke
+                                      ..strokeCap = StrokeCap.round
+                                      ..isAntiAlias = true
+                                      ..color = selectedColor
+                                      ..strokeWidth = selectedTool == kToolTypeEraser ? eraserWidth : strokeWidth
+                                      ..blendMode = BlendMode.srcOver;
+                                  });
+                                } else if (drawMode == "circle") {
+                                  setState(() {
+                                    circleStart = localPosition;
+                                    circleCurrent = localPosition;
+                                  });
+                                } else if (drawMode == "square" || drawMode == "triangle") {
+                                  setState(() {
+                                    shapeStart = localPosition;
+                                    shapeCurrent = localPosition;
+                                  });
+                                } else if (drawMode == "curve") {
+                                  setState(() {
+                                    curveStart = localPosition;
+                                    curveEnd = localPosition;
+                                  });
+                                }
+                              },
+
+
+                              onPointerMove: (event) {
+                                if (_stylusOnlyMode && event.kind != PointerDeviceKind.stylus) return;
+                                if (!isDrawing) return;
+
+                                final localPosition = event.localPosition;
+
+                                if (drawMode == "free") {
+                                  setState(() {
                                     points.add(DrawingArea(
-                                      point: previewEnd!,
-                                      areaPaint: linePaintInProgress!,
+                                      point: localPosition,
                                       lineStyle: currentLineStyle,
+                                      areaPaint: Paint()
+                                        ..style = PaintingStyle.stroke
+                                        ..strokeCap = StrokeCap.round
+                                        ..isAntiAlias = true
+                                        ..strokeWidth = selectedTool == kToolTypeEraser ? eraserWidth : strokeWidth
+                                        ..color = selectedTool == kToolTypeEraser ? Colors.transparent : selectedColor
+                                        ..blendMode = selectedTool == kToolTypeEraser ? BlendMode.clear : BlendMode.srcOver,
                                     ));
+                                  });
+                                } else if (drawMode == "line") {
+                                  setState(() {
+                                    previewEnd = localPosition;
+                                  });
+                                } else if (drawMode == "circle") {
+                                  setState(() {
+                                    circleCurrent = localPosition;
+                                  });
+                                } else if (drawMode == "square" || drawMode == "triangle") {
+                                  setState(() {
+                                    shapeCurrent = localPosition;
+                                  });
+                                } else if (drawMode == "curve") {
+                                  setState(() {
+                                    curveEnd = localPosition;
+                                  });
+                                }
+                              },
+
+                              onPointerUp: (event) {
+                                if (_stylusOnlyMode && event.kind != PointerDeviceKind.stylus) return;
+                                if (!isDrawing) return;
+
+                                if (drawMode == "free") {
+                                  setState(() {
                                     points.add(null);
                                     _pushHistorySnapshot();
-                                    lineStart = null;
-                                    previewEnd = null;
-                                    linePaintInProgress = null;
                                   });
-                                } else {
-                                  setState(() {
-                                    lineStart = null;
-                                    previewEnd = null;
-                                  });
-                                }
-                              } else if (drawMode == "circle") {
-                                if (circleStart != null && circleCurrent != null) {
-                                  setState(() {
-                                    final center = Offset(
-                                      (circleStart!.dx + circleCurrent!.dx) / 2,
-                                      (circleStart!.dy + circleCurrent!.dy) / 2,
-                                    );
-                                    final radius = (circleStart! - circleCurrent!).distance / 2;
-                                    circles.add(ShapeCircle(
-                                      center: center,
-                                      radius: radius,
-                                      paint: Paint()
-                                        ..color = selectedColor
-                                        ..strokeWidth = strokeWidth
-                                        ..style = PaintingStyle.stroke
-                                        ..isAntiAlias = true,
-                                    ));
-                                    _pushHistorySnapshot();
-                                    circleStart = null;
-                                    circleCurrent = null;
+                                } else if (drawMode == "line") {
+                                  if (lineStart != null && previewEnd != null && linePaintInProgress != null) {
+                                    setState(() {
+                                      points.add(DrawingArea(
+                                        point: lineStart!,
+                                        areaPaint: linePaintInProgress!,
+                                        lineStyle: currentLineStyle,
+                                      ));
+                                      points.add(DrawingArea(
+                                        point: previewEnd!,
+                                        areaPaint: linePaintInProgress!,
+                                        lineStyle: currentLineStyle,
+                                      ));
+                                      points.add(null);
+                                      _pushHistorySnapshot();
+                                      lineStart = null;
+                                      previewEnd = null;
+                                      linePaintInProgress = null;
+                                    });
+                                  } else {
+                                    setState(() {
+                                      lineStart = null;
+                                      previewEnd = null;
+                                    });
+                                  }
+                                } else if (drawMode == "circle") {
+                                  if (circleStart != null && circleCurrent != null) {
+                                    setState(() {
+                                      final center = Offset(
+                                        (circleStart!.dx + circleCurrent!.dx) / 2,
+                                        (circleStart!.dy + circleCurrent!.dy) / 2,
+                                      );
+                                      final radius = (circleStart! - circleCurrent!).distance / 2;
+                                      circles.add(ShapeCircle(
+                                        center: center,
+                                        radius: radius,
+                                        paint: Paint()
+                                          ..color = selectedColor
+                                          ..strokeWidth = strokeWidth
+                                          ..style = PaintingStyle.stroke
+                                          ..isAntiAlias = true,
+                                      ));
+                                      _pushHistorySnapshot();
+                                      circleStart = null;
+                                      circleCurrent = null;
 
-                                    // หยุดโหมดวาดทันทีหลังวาดเสร็จ
-                                    isDrawing = false;
-                                    selectedTool = kToolTypeNone;
-                                    drawMode = "";
-                                  });
-                                } else {
-                                  setState(() {
-                                    circleStart = null;
-                                    circleCurrent = null;
-                                  });
-                                }
-                              } else if (drawMode == "square" || drawMode == "triangle") {
-                                if (shapeStart != null && shapeCurrent != null) {
-                                  setState(() {
-                                    final center = Offset(
-                                      (shapeStart!.dx + shapeCurrent!.dx) / 2,
-                                      (shapeStart!.dy + shapeCurrent!.dy) / 2,
-                                    );
-                                    shapes.add(Shape(
-                                      type: drawMode == "square" ? Shape_TriangleSquare.square : Shape_TriangleSquare.triangle,
-                                      center: center,
-                                      width: (shapeCurrent!.dx - shapeStart!.dx).abs(),
-                                      height: (shapeCurrent!.dy - shapeStart!.dy).abs(),
-                                      paint: Paint()
-                                        ..color = selectedColor
-                                        ..strokeWidth = strokeWidth
-                                        ..style = PaintingStyle.stroke
-                                        ..isAntiAlias = true,
-                                    ));
-                                    _pushHistorySnapshot();
+                                      // หยุดโหมดวาดทันทีหลังวาดเสร็จ
+                                      isDrawing = false;
+                                      selectedTool = kToolTypeNone;
+                                      drawMode = "";
+                                    });
+                                  } else {
+                                    setState(() {
+                                      circleStart = null;
+                                      circleCurrent = null;
+                                    });
+                                  }
+                                } else if (drawMode == "square" || drawMode == "triangle") {
+                                  if (shapeStart != null && shapeCurrent != null) {
+                                    setState(() {
+                                      final center = Offset(
+                                        (shapeStart!.dx + shapeCurrent!.dx) / 2,
+                                        (shapeStart!.dy + shapeCurrent!.dy) / 2,
+                                      );
+                                      shapes.add(Shape(
+                                        type: drawMode == "square" ? Shape_TriangleSquare.square : Shape_TriangleSquare.triangle,
+                                        center: center,
+                                        width: (shapeCurrent!.dx - shapeStart!.dx).abs(),
+                                        height: (shapeCurrent!.dy - shapeStart!.dy).abs(),
+                                        paint: Paint()
+                                          ..color = selectedColor
+                                          ..strokeWidth = strokeWidth
+                                          ..style = PaintingStyle.stroke
+                                          ..isAntiAlias = true,
+                                      ));
+                                      _pushHistorySnapshot();
 
-                                    isDrawing = false;
-                                    selectedTool = kToolTypeNone;
-                                    drawMode = "";
+                                      isDrawing = false;
+                                      selectedTool = kToolTypeNone;
+                                      drawMode = "";
+                                    });
+                                  }
+                                  setState(() {
+                                    shapeStart = null;
+                                    shapeCurrent = null;
+                                  });
+                                } else if (drawMode == "curve") {
+                                  if (curveStart != null && curveEnd != null &&
+                                      (curveStart! - curveEnd!).distance > 8) {
+                                    setState(() {
+                                      final mid = Offset.lerp(curveStart!, curveEnd!, 0.5)!;
+                                      curves.add(ShapeCurve(
+                                        points: [curveStart!, mid, curveEnd!],
+                                        lineStyle: currentLineStyle,
+                                        paint: Paint()
+                                          ..color = selectedColor
+                                          ..strokeWidth = strokeWidth
+                                          ..strokeCap = StrokeCap.round
+                                          ..style = PaintingStyle.stroke
+                                          ..isAntiAlias = true,
+                                      ));
+                                      _pushHistorySnapshot();
+
+                                      isDrawing = false;
+                                      selectedTool = kToolTypeNone;
+                                      drawMode = "";
+                                    });
+                                  }
+                                  setState(() {
+                                    curveStart = null;
+                                    curveEnd = null;
                                   });
                                 }
+                              },
+
+                              // ปากกาออกนอกจอ หรือ interrupt
+                              onPointerCancel: (event) {
+                                if (_stylusOnlyMode && event.kind != PointerDeviceKind.stylus) return;
                                 setState(() {
+                                  if (drawMode == "free") {
+                                    points.add(null);
+                                    _pushHistorySnapshot();
+                                  }
+                                  lineStart = null;
+                                  previewEnd = null;
+                                  linePaintInProgress = null;
+                                  circleStart = null;
+                                  circleCurrent = null;
                                   shapeStart = null;
                                   shapeCurrent = null;
-                                });
-                              } else if (drawMode == "curve") {
-                                if (curveStart != null && curveEnd != null &&
-                                    (curveStart! - curveEnd!).distance > 8) {
-                                  setState(() {
-                                    final mid = Offset.lerp(curveStart!, curveEnd!, 0.5)!;
-                                    curves.add(ShapeCurve(
-                                      points: [curveStart!, mid, curveEnd!],
-                                      lineStyle: currentLineStyle,
-                                      paint: Paint()
-                                        ..color = selectedColor
-                                        ..strokeWidth = strokeWidth
-                                        ..strokeCap = StrokeCap.round
-                                        ..style = PaintingStyle.stroke
-                                        ..isAntiAlias = true,
-                                    ));
-                                    _pushHistorySnapshot();
-
-                                    isDrawing = false;
-                                    selectedTool = kToolTypeNone;
-                                    drawMode = "";
-                                  });
-                                }
-                                setState(() {
                                   curveStart = null;
                                   curveEnd = null;
                                 });
-                              }
-                            },
-
-                            // ปากกาออกนอกจอ หรือ interrupt
-                            onPointerCancel: (event) {
-                              if (_stylusOnlyMode && event.kind != PointerDeviceKind.stylus) return;
-                              setState(() {
-                                if (drawMode == "free") {
-                                  points.add(null);
-                                  _pushHistorySnapshot();
-                                }
-                                lineStart = null;
-                                previewEnd = null;
-                                linePaintInProgress = null;
-                                circleStart = null;
-                                circleCurrent = null;
-                                shapeStart = null;
-                                shapeCurrent = null;
-                                curveStart = null;
-                                curveEnd = null;
-                              });
-                            },
-
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTapUp: (details) {
-                                FocusScope.of(context).unfocus();
-
-                                final pos = details.localPosition;
-
-                                // แตะใกล้เส้นโค้งเส้นใดเส้นหนึ่ง >> เลือกเส้นนั้นแทนการยกเลิกเลือก
-                                for (int i = curves.length - 1; i >= 0; i--) {
-                                  if (isPointNearCurve(pos, curves[i])) {
-                                    setState(() {
-                                      _selectedCurveIndex = i;
-                                      _selectedShapeIndex = null;
-                                      _selectedCircleIndex = null;
-                                      for (var t in texts) t['selected'] = false;
-                                    });
-                                    return;
-                                  }
-                                }
-
-                                // แตะพื้นที่อื่น >> ยกเลิกการเลือกทั้งหมด
-                                setState(() {
-                                  for (var t in texts) t['selected'] = false;
-                                  _selectedShapeIndex = null;
-                                  _selectedCircleIndex = null;
-                                  _selectedCurveIndex = null;
-                                  _selectedIconIndex = null;
-                                });
                               },
 
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                                child: Stack(
-                                  children: [
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTapUp: (details) {
+                                  FocusScope.of(context).unfocus();
 
-                                    // พื้นหลังกระดาษ
-                                    Container(color: Colors.white),
+                                  final pos = details.localPosition;
 
-                                    // Background Image จาก Gallery
-                                    if (backgroundImage.value != null)
-                                      Positioned.fill(
-                                        child: Opacity(
-                                          opacity: 1.0,
-                                          child: RawImage(
-                                            image: backgroundImage.value,
-                                            fit: BoxFit.contain,
-                                          ),
-                                        ),
-                                      ),
+                                  // แตะใกล้เส้นโค้งเส้นใดเส้นหนึ่ง >> เลือกเส้นนั้นแทนการยกเลิกเลือก
+                                  for (int i = curves.length - 1; i >= 0; i--) {
+                                    if (isPointNearCurve(pos, curves[i])) {
+                                      setState(() {
+                                        _selectedCurveIndex = i;
+                                        _selectedShapeIndex = null;
+                                        _selectedCircleIndex = null;
+                                        for (var t in texts) t['selected'] = false;
+                                      });
+                                      return;
+                                    }
+                                  }
 
-                                    // แสดงภาพ grid paper
-                                    if (grid_paper_Layer)
-                                      IgnorePointer(
-                                        child: Center(
+                                  // แตะพื้นที่อื่น >> ยกเลิกการเลือกทั้งหมด
+                                  setState(() {
+                                    for (var t in texts) t['selected'] = false;
+                                    _selectedShapeIndex = null;
+                                    _selectedCircleIndex = null;
+                                    _selectedCurveIndex = null;
+                                    _selectedIconIndex = null;
+                                  });
+                                },
+
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                                  child: Stack(
+                                    children: [
+
+                                      // พื้นหลังกระดาษ
+                                      Container(color: Colors.white),
+
+                                      // Background Image จาก Gallery
+                                      if (backgroundImage.value != null)
+                                        Positioned.fill(
                                           child: Opacity(
-                                            opacity: 0.4,
-                                            child: Image.asset(
-                                              'assets/images/grid_paper.png',
+                                            opacity: 1.0,
+                                            child: RawImage(
+                                              image: backgroundImage.value,
                                               fit: BoxFit.contain,
-                                              width: double.infinity,
-                                              height: double.infinity,
                                             ),
                                           ),
                                         ),
+
+                                      // แสดงภาพ grid paper
+                                      if (grid_paper_Layer)
+                                        IgnorePointer(
+                                          child: Center(
+                                            child: Opacity(
+                                              opacity: 0.4,
+                                              child: Image.asset(
+                                                'assets/images/grid_paper.png',
+                                                fit: BoxFit.contain,
+                                                width: double.infinity,
+                                                height: double.infinity,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                      // วาดรูป
+                                      CustomPaint(
+                                        painter: MyCustomPainter(
+                                          points: points,
+                                          color: selectedColor,
+                                          strokeWidth: (selectedTool == kToolTypeEraser) ? eraserWidth : strokeWidth,
+                                          lineStyle: currentLineStyle,
+                                          drawMode: drawMode,
+                                          previewStart: lineStart,
+                                          previewEnd: previewEnd,
+                                          circleStart: circleStart,
+                                          circleCurrent: circleCurrent,
+                                          shapeStart: shapeStart,
+                                          shapeCurrent: shapeCurrent,
+                                          curves: curves,
+                                          curveStart: curveStart,
+                                          curveEnd: curveEnd,
+                                          backgroundImage: backgroundImage.value,
+                                        ),
+                                        // child: Container(),
+                                        size: Size.infinite,
                                       ),
 
-                                    // วาดรูป
-                                    CustomPaint(
-                                      painter: MyCustomPainter(
-                                        points: points,
-                                        color: selectedColor,
-                                        strokeWidth: (selectedTool == kToolTypeEraser) ? eraserWidth : strokeWidth,
-                                        lineStyle: currentLineStyle,
-                                        drawMode: drawMode,
-                                        previewStart: lineStart,
-                                        previewEnd: previewEnd,
-                                        circleStart: circleStart,
-                                        circleCurrent: circleCurrent,
-                                        shapeStart: shapeStart,
-                                        shapeCurrent: shapeCurrent,
-                                        curves: curves,
-                                        curveStart: curveStart,
-                                        curveEnd: curveEnd,
-                                        backgroundImage: backgroundImage.value,
-                                      ),
-                                      // child: Container(),
-                                      size: Size.infinite,
-                                    ),
-
-                                    // Shapes (square/triangle)
-                                    ...shapes.asMap().entries.map((entry) {
-                                      final i = entry.key;
-                                      final shape = entry.value;
-                                      return WDraggableShape(
-                                        key: ValueKey('shape_$i'),
-                                        shape: shape,
-                                        selected: _selectedShapeIndex == i,
-                                        drawingActive: isDrawing,
-                                        onSelect: () {
-                                          setState(() {
-                                            _selectedShapeIndex = i;
-                                            _selectedCircleIndex = null;
-                                            _selectedCurveIndex = null;
-                                            _selectedIconIndex = null;
-                                            isDrawing = false;
-                                            selectedTool = kToolTypeNone;
-                                            drawMode = "";
-                                            for (var t in texts) t['selected'] = false;
-                                          });
-                                        },
-                                        onDelete: () {
-                                          setState(() {
-                                            shapes.removeAt(i);
-                                            _selectedShapeIndex = null;
-                                            _pushHistorySnapshot();
-                                          });
-                                        },
-                                        onDuplicate: () {
-                                          setState(() {
-                                            final copy = shape.copyWith();
-                                            copy.center = copy.center + const Offset(20, 20);
-                                            shapes.insert(i + 1, copy);
-                                            _selectedShapeIndex = i + 1;
-                                            _selectedCircleIndex = null;
-                                            _selectedCurveIndex = null;
-                                            _selectedIconIndex = null;
-                                            _pushHistorySnapshot();
-                                          });
-                                        },
-                                        onTransformEnd: () {
-                                          setState(() {});
-                                          _pushHistorySnapshot();
-                                        },
-                                      );
-                                    }),
-
-                                    // Circles
-                                    ...circles.asMap().entries.map((entry) {
-                                      final i = entry.key;
-                                      final circle = entry.value;
-                                      return WDraggableCircle(
-                                        key: ValueKey('circle_$i'),
-                                        circle: circle,
-                                        selected: _selectedCircleIndex == i,
-                                        drawingActive: isDrawing,
-                                        onSelect: () {
-                                          setState(() {
-                                            _selectedCircleIndex = i;
-                                            _selectedShapeIndex = null;
-                                            _selectedCurveIndex = null;
-                                            _selectedIconIndex = null;
-                                            isDrawing = false;
-                                            selectedTool = kToolTypeNone;
-                                            drawMode = "";
-                                            for (var t in texts) t['selected'] = false;
-                                          });
-                                        },
-                                        onDelete: () {
-                                          setState(() {
-                                            circles.removeAt(i);
-                                            _selectedCircleIndex = null;
-                                            _pushHistorySnapshot();
-                                          });
-                                        },
-                                        onDuplicate: () {
-                                          setState(() {
-                                            final copy = circle.copyWith();
-                                            copy.center = copy.center + const Offset(20, 20);
-                                            circles.insert(i + 1, copy);
-                                            _selectedCircleIndex = i + 1;
-                                            _selectedShapeIndex = null;
-                                            _selectedCurveIndex = null;
-                                            _selectedIconIndex = null;
-                                            _pushHistorySnapshot();
-                                          });
-                                        },
-                                        onTransformEnd: () {
-                                          setState(() {});
-                                          _pushHistorySnapshot();
-                                        },
-                                      );
-                                    }),
-
-                                    // Curves
-                                    ...curves.asMap().entries.map((entry) {
-                                      final i = entry.key;
-                                      final curve = entry.value;
-                                      return WDraggableCurve(
-                                        key: ValueKey('curve_$i'),
-                                        curve: curve,
-                                        selected: _selectedCurveIndex == i,
-                                        onSelect: () {
-                                          setState(() {
-                                            _selectedCurveIndex = i;
-                                            _selectedShapeIndex = null;
-                                            _selectedCircleIndex = null;
-                                            _selectedIconIndex = null;
-                                            isDrawing = false;
-                                            selectedTool = kToolTypeNone;
-                                            drawMode = "";
-                                            for (var t in texts) t['selected'] = false;
-                                          });
-                                        },
-                                        onDelete: () {
-                                          setState(() {
-                                            curves.removeAt(i);
-                                            _selectedCurveIndex = null;
-                                            _pushHistorySnapshot();
-                                          });
-                                        },
-                                        onChanged: () => setState(() {}),
-                                        onTransformEnd: () {
-                                          _pushHistorySnapshot();
-                                        },
-                                      );
-                                    }),
-
-                                    // Icons
-                                    ..._widgetsData.asMap().entries.map((entry) {
-                                      final i = entry.key;
-                                      final data = entry.value;
-                                      return WDraggableIcon(
-                                        key: ValueKey('icon_${i}_${data['path']}'),
-                                        position: Offset(data['x'], data['y']),
-                                        assetPath: data['path'],
-                                        scale: data['scale'],
-                                        rotation: data['rotation'],
-                                        selected: _selectedIconIndex == i,
-                                        drawingActive: isDrawing,
-                                        iconSize: 40,
-                                        onSelect: () {
-                                          setState(() {
-                                            _selectedIconIndex = i;
-                                            _selectedShapeIndex = null;
-                                            _selectedCircleIndex = null;
-                                            _selectedCurveIndex = null;
-                                            isDrawing = false;
-                                            selectedTool = kToolTypeNone;
-                                            drawMode = "";
-                                            for (var t in texts) t['selected'] = false;
-                                          });
-                                        },
-                                        onMove: (pos) {
-                                          _widgetsData[i]['x'] = pos.dx;
-                                          _widgetsData[i]['y'] = pos.dy;
-                                        },
-                                        onScale: (s) => _widgetsData[i]['scale'] = s,
-                                        onRotate: (r) => _widgetsData[i]['rotation'] = r,
-                                        onDelete: () {
-                                          setState(() {
-                                            _widgetsData.removeAt(i);
-                                            _selectedIconIndex = null;
-                                            _pushHistorySnapshot();
-                                          });
-                                        },
-                                        onDuplicate: () {
-                                          setState(() {
-                                            final copy = Map<String, dynamic>.from(_widgetsData[i]);
-                                            copy['x'] = (copy['x'] as double) + 20.0;
-                                            copy['y'] = (copy['y'] as double) + 20.0;
-                                            _widgetsData.insert(i + 1, copy);
-                                            _selectedIconIndex = i + 1;
-                                            _pushHistorySnapshot();
-                                          });
-                                        },
-                                        onTransformEnd: () {
-                                          _pushHistorySnapshot();
-                                        },
-                                      );
-                                    }),
-
-                                    // AddText
-                                    ...texts
-                                        .asMap()
-                                        .entries
-                                        .map((entry) {
-                                      final i = entry.key;
-                                      final item = entry.value;
-                                      return WdraggableText(
-                                        key: ValueKey('text_${i}_${item['text']}'),
-                                        position: item['position'],
-                                        text: item['text'],
-                                        scale: item['scale'],
-                                        selected: item['selected'] ?? false,
-                                        rotation: item['rotation'],
-                                        isBold: item['bold'] ?? false,
-                                        autofocusEdit: i == _newTextIndex,
-
-                                        textColor: Color(item['color'] ?? Colors.black.value),
-                                        onColorChanged: (c) {
-                                          setState(() {
-                                            texts[i]['color'] = c.value;
-                                          });
-                                          _pushHistorySnapshot();
-                                        },
-
-                                        hasOutline: item['hasOutline'] ?? false,
-                                        onOutlineChanged: (value) {
-                                          setState(() {
-                                            texts[i]['hasOutline'] = value;
-                                          });
-                                          _pushHistorySnapshot();
-                                        },
-
-                                        onBoldChanged: (value) {
-                                          setState(() {
-                                            texts[i]['bold'] = value;
-                                          });
-                                          _pushHistorySnapshot();
-                                        },
-
-                                        onSelect: () {
-                                          setState(() {
-
-                                            selectedTool = kToolTypeNone;
-                                            drawMode = "";
-                                            isDrawing = false;
-                                            _selectedShapeIndex = null;
-                                            _selectedCircleIndex = null;
-                                            _selectedCurveIndex = null;
-                                            _selectedIconIndex = null;
-
-                                            for (final t in texts) {
-                                              t['selected'] = false;
-                                            }
-                                            texts[i]['selected'] = true;
-                                          });
-                                        },
-
-                                        onUnselect: () {
-                                          setState(() {
-                                            texts[i]['selected'] = false;
-                                          });
-                                        },
-
-                                        onMove: (p) {
-                                          setState(() {
-                                            texts[i]['position'] = p;
-                                          });
-                                        },
-
-                                        onScale: (s) {
-                                          setState(() {
-                                            texts[i]['scale'] = s;
-                                          });
-                                        },
-
-                                        onChanged: (t) {
-                                          setState(() {
-                                            texts[i]['text'] = t;
-                                          });
-                                          _pushHistorySnapshot();
-                                        },
-
-                                        onRotate: (r) {
-                                          setState(() {
-                                            texts[i]['rotation'] = r;
-                                          });
-                                        },
-
-                                        onDelete: () {
-                                          setState(() {
-                                            texts.removeAt(i);
-                                          });
-                                          _pushHistorySnapshot();
-                                        },
-
-                                        onDuplicate: () {
-                                          setState(() {
-                                            for (var t in texts) t['selected'] = false;
-
-                                            texts.add({
-                                              'position': item['position'] + const Offset(20, 20),
-                                              'text': item['text'],
-                                              'scale': item['scale'],
-                                              'rotation': item['rotation'],
-                                              'bold' : item['bold'] ?? false,
-                                              'hasOutline': item['hasOutline'] ?? false,
-                                              'color': item['color'] ?? Colors.black.value,
-                                              'selected': true,
+                                      // Shapes (square/triangle)
+                                      ...shapes.asMap().entries.map((entry) {
+                                        final i = entry.key;
+                                        final shape = entry.value;
+                                        return WDraggableShape(
+                                          key: ValueKey('shape_$i'),
+                                          shape: shape,
+                                          selected: _selectedShapeIndex == i,
+                                          drawingActive: isDrawing,
+                                          onSelect: () {
+                                            setState(() {
+                                              _selectedShapeIndex = i;
+                                              _selectedCircleIndex = null;
+                                              _selectedCurveIndex = null;
+                                              _selectedIconIndex = null;
+                                              isDrawing = false;
+                                              selectedTool = kToolTypeNone;
+                                              drawMode = "";
+                                              for (var t in texts) t['selected'] = false;
                                             });
-                                          });
-                                          _pushHistorySnapshot();
-                                        },
+                                          },
+                                          onDelete: () {
+                                            setState(() {
+                                              shapes.removeAt(i);
+                                              _selectedShapeIndex = null;
+                                              _pushHistorySnapshot();
+                                            });
+                                          },
+                                          onDuplicate: () {
+                                            setState(() {
+                                              final copy = shape.copyWith();
+                                              copy.center = copy.center + const Offset(20, 20);
+                                              shapes.insert(i + 1, copy);
+                                              _selectedShapeIndex = i + 1;
+                                              _selectedCircleIndex = null;
+                                              _selectedCurveIndex = null;
+                                              _selectedIconIndex = null;
+                                              _pushHistorySnapshot();
+                                            });
+                                          },
+                                          onTransformEnd: () {
+                                            setState(() {});
+                                            _pushHistorySnapshot();
+                                          },
+                                        );
+                                      }),
 
-                                        onTransformEnd: () {
-                                          _pushHistorySnapshot();
-                                        },
-                                      );
-                                    }),
+                                      // Circles
+                                      ...circles.asMap().entries.map((entry) {
+                                        final i = entry.key;
+                                        final circle = entry.value;
+                                        return WDraggableCircle(
+                                          key: ValueKey('circle_$i'),
+                                          circle: circle,
+                                          selected: _selectedCircleIndex == i,
+                                          drawingActive: isDrawing,
+                                          onSelect: () {
+                                            setState(() {
+                                              _selectedCircleIndex = i;
+                                              _selectedShapeIndex = null;
+                                              _selectedCurveIndex = null;
+                                              _selectedIconIndex = null;
+                                              isDrawing = false;
+                                              selectedTool = kToolTypeNone;
+                                              drawMode = "";
+                                              for (var t in texts) t['selected'] = false;
+                                            });
+                                          },
+                                          onDelete: () {
+                                            setState(() {
+                                              circles.removeAt(i);
+                                              _selectedCircleIndex = null;
+                                              _pushHistorySnapshot();
+                                            });
+                                          },
+                                          onDuplicate: () {
+                                            setState(() {
+                                              final copy = circle.copyWith();
+                                              copy.center = copy.center + const Offset(20, 20);
+                                              circles.insert(i + 1, copy);
+                                              _selectedCircleIndex = i + 1;
+                                              _selectedShapeIndex = null;
+                                              _selectedCurveIndex = null;
+                                              _selectedIconIndex = null;
+                                              _pushHistorySnapshot();
+                                            });
+                                          },
+                                          onTransformEnd: () {
+                                            setState(() {});
+                                            _pushHistorySnapshot();
+                                          },
+                                        );
+                                      }),
 
-                                  ],
+                                      // Curves
+                                      ...curves.asMap().entries.map((entry) {
+                                        final i = entry.key;
+                                        final curve = entry.value;
+                                        return WDraggableCurve(
+                                          key: ValueKey('curve_$i'),
+                                          curve: curve,
+                                          selected: _selectedCurveIndex == i,
+                                          onSelect: () {
+                                            setState(() {
+                                              _selectedCurveIndex = i;
+                                              _selectedShapeIndex = null;
+                                              _selectedCircleIndex = null;
+                                              _selectedIconIndex = null;
+                                              isDrawing = false;
+                                              selectedTool = kToolTypeNone;
+                                              drawMode = "";
+                                              for (var t in texts) t['selected'] = false;
+                                            });
+                                          },
+                                          onDelete: () {
+                                            setState(() {
+                                              curves.removeAt(i);
+                                              _selectedCurveIndex = null;
+                                              _pushHistorySnapshot();
+                                            });
+                                          },
+                                          onChanged: () => setState(() {}),
+                                          onTransformEnd: () {
+                                            _pushHistorySnapshot();
+                                          },
+                                        );
+                                      }),
+
+                                      // Icons
+                                      ..._widgetsData.asMap().entries.map((entry) {
+                                        final i = entry.key;
+                                        final data = entry.value;
+                                        return WDraggableIcon(
+                                          key: ValueKey('icon_${i}_${data['path']}'),
+                                          position: Offset(data['x'], data['y']),
+                                          assetPath: data['path'],
+                                          scale: data['scale'],
+                                          rotation: data['rotation'],
+                                          selected: _selectedIconIndex == i,
+                                          drawingActive: isDrawing,
+                                          iconSize: 40,
+                                          onSelect: () {
+                                            setState(() {
+                                              _selectedIconIndex = i;
+                                              _selectedShapeIndex = null;
+                                              _selectedCircleIndex = null;
+                                              _selectedCurveIndex = null;
+                                              isDrawing = false;
+                                              selectedTool = kToolTypeNone;
+                                              drawMode = "";
+                                              for (var t in texts) t['selected'] = false;
+                                            });
+                                          },
+                                          onMove: (pos) {
+                                            _widgetsData[i]['x'] = pos.dx;
+                                            _widgetsData[i]['y'] = pos.dy;
+                                          },
+                                          onScale: (s) => _widgetsData[i]['scale'] = s,
+                                          onRotate: (r) => _widgetsData[i]['rotation'] = r,
+                                          onDelete: () {
+                                            setState(() {
+                                              _widgetsData.removeAt(i);
+                                              _selectedIconIndex = null;
+                                              _pushHistorySnapshot();
+                                            });
+                                          },
+                                          onDuplicate: () {
+                                            setState(() {
+                                              final copy = Map<String, dynamic>.from(_widgetsData[i]);
+                                              copy['x'] = (copy['x'] as double) + 20.0;
+                                              copy['y'] = (copy['y'] as double) + 20.0;
+                                              _widgetsData.insert(i + 1, copy);
+                                              _selectedIconIndex = i + 1;
+                                              _pushHistorySnapshot();
+                                            });
+                                          },
+                                          onTransformEnd: () {
+                                            _pushHistorySnapshot();
+                                          },
+                                        );
+                                      }),
+
+                                      // AddText
+                                      ...texts
+                                          .asMap()
+                                          .entries
+                                          .map((entry) {
+                                        final i = entry.key;
+                                        final item = entry.value;
+                                        return WdraggableText(
+                                          key: ValueKey('text_${i}_${item['text']}'),
+                                          position: item['position'],
+                                          text: item['text'],
+                                          scale: item['scale'],
+                                          selected: item['selected'] ?? false,
+                                          rotation: item['rotation'],
+                                          isBold: item['bold'] ?? false,
+                                          autofocusEdit: i == _newTextIndex,
+
+                                          textColor: Color(item['color'] ?? Colors.black.value),
+                                          onColorChanged: (c) {
+                                            setState(() {
+                                              texts[i]['color'] = c.value;
+                                            });
+                                            _pushHistorySnapshot();
+                                          },
+
+                                          hasOutline: item['hasOutline'] ?? false,
+                                          onOutlineChanged: (value) {
+                                            setState(() {
+                                              texts[i]['hasOutline'] = value;
+                                            });
+                                            _pushHistorySnapshot();
+                                          },
+
+                                          onBoldChanged: (value) {
+                                            setState(() {
+                                              texts[i]['bold'] = value;
+                                            });
+                                            _pushHistorySnapshot();
+                                          },
+
+                                          onSelect: () {
+                                            setState(() {
+
+                                              selectedTool = kToolTypeNone;
+                                              drawMode = "";
+                                              isDrawing = false;
+                                              _selectedShapeIndex = null;
+                                              _selectedCircleIndex = null;
+                                              _selectedCurveIndex = null;
+                                              _selectedIconIndex = null;
+
+                                              for (final t in texts) {
+                                                t['selected'] = false;
+                                              }
+                                              texts[i]['selected'] = true;
+                                            });
+                                          },
+
+                                          onUnselect: () {
+                                            setState(() {
+                                              texts[i]['selected'] = false;
+                                            });
+                                          },
+
+                                          onMove: (p) {
+                                            setState(() {
+                                              texts[i]['position'] = p;
+                                            });
+                                          },
+
+                                          onScale: (s) {
+                                            setState(() {
+                                              texts[i]['scale'] = s;
+                                            });
+                                          },
+
+                                          onChanged: (t) {
+                                            setState(() {
+                                              texts[i]['text'] = t;
+                                            });
+                                            _pushHistorySnapshot();
+                                          },
+
+                                          onRotate: (r) {
+                                            setState(() {
+                                              texts[i]['rotation'] = r;
+                                            });
+                                          },
+
+                                          onDelete: () {
+                                            setState(() {
+                                              texts.removeAt(i);
+                                            });
+                                            _pushHistorySnapshot();
+                                          },
+
+                                          onDuplicate: () {
+                                            setState(() {
+                                              for (var t in texts) t['selected'] = false;
+
+                                              texts.add({
+                                                'position': item['position'] + const Offset(20, 20),
+                                                'text': item['text'],
+                                                'scale': item['scale'],
+                                                'rotation': item['rotation'],
+                                                'bold' : item['bold'] ?? false,
+                                                'hasOutline': item['hasOutline'] ?? false,
+                                                'color': item['color'] ?? Colors.black.value,
+                                                'selected': true,
+                                              });
+                                            });
+                                            _pushHistorySnapshot();
+                                          },
+
+                                          onTransformEnd: () {
+                                            _pushHistorySnapshot();
+                                          },
+                                        );
+                                      }),
+
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -2147,475 +2177,475 @@ class _Note_CreateNewPointState extends State<Note_CreateNewPoint> {
                         ),
                       ),
                     ),
-                  ),
 
-                  SizedBox(height: 20),
+                    SizedBox(height: 20),
 
-                  // แถบเครื่องมือด้านล่าง
-                  Container(
-                    width: 700,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.all(Radius.circular(16.0),
+                    // แถบเครื่องมือด้านล่าง
+                    Container(
+                      width: 700,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.all(Radius.circular(16.0),
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
 
-                        /// แถวแรก
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
+                          /// แถวแรก
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
 
-                            // Pen mode
-                            DrawToolButton(
-                              icon: Icons.edit,
-                              label: 'วาดด้วยปากกา',
-                              selected: _stylusOnlyMode,
-                              onPressed: () {
-                                _clearAllSelections();
-                                setState(() {
-                                  _stylusOnlyMode = !_stylusOnlyMode;
-                                });
-                              },
-                            ),
-
-                            SizedBox(width: 5),
-
-                            // สี
-                            DrawToolButton(
-                              icon: Icons.color_lens_sharp,
-                              label: 'สี',
-                              selected: false,
-                              iconColor: selectedColor,
-                              onPressed: () {
-                                _clearAllSelections();
-                                selectColor();
-                              },
-                            ),
-
-                            SizedBox(width: 5),
-
-                            SizedBox(
-                              height: 50,
-                              child: VerticalDivider(
-                                width: 16,
-                                thickness: 1,
-                                color: Colors.grey.shade400,
+                              // Pen mode
+                              DrawToolButton(
+                                icon: Icons.edit,
+                                label: 'วาดด้วยปากกา',
+                                selected: _stylusOnlyMode,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  setState(() {
+                                    _stylusOnlyMode = !_stylusOnlyMode;
+                                  });
+                                },
                               ),
-                            ),
 
-                            SizedBox(width: 5),
+                              SizedBox(width: 5),
 
-                            // ความหนาเส้น/ยางลบ
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
+                              // สี
+                              DrawToolButton(
+                                icon: Icons.color_lens_sharp,
+                                label: 'สี',
+                                selected: false,
+                                iconColor: selectedColor,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  selectColor();
+                                },
+                              ),
 
-                                Row(
-                                  children: [
+                              SizedBox(width: 5),
 
-                                    SizedBox(
-                                      width: 25,
-                                      child: Text(
-                                        (selectedTool == kToolTypeEraser)
-                                            ? eraserWidth.toStringAsFixed(1)
-                                            : strokeWidth.toStringAsFixed(1),
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: (selectedTool == kToolTypeEraser)
-                                              ? Colors.grey
-                                              : Colors.black,
+                              SizedBox(
+                                height: 50,
+                                child: VerticalDivider(
+                                  width: 16,
+                                  thickness: 1,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+
+                              SizedBox(width: 5),
+
+                              // ความหนาเส้น/ยางลบ
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+
+                                  Row(
+                                    children: [
+
+                                      SizedBox(
+                                        width: 25,
+                                        child: Text(
+                                          (selectedTool == kToolTypeEraser)
+                                              ? eraserWidth.toStringAsFixed(1)
+                                              : strokeWidth.toStringAsFixed(1),
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: (selectedTool == kToolTypeEraser)
+                                                ? Colors.grey
+                                                : Colors.black,
+                                          ),
                                         ),
                                       ),
-                                    ),
 
-                                    SizedBox(
-                                      width: 150,
-                                      child: Slider(
-                                        min: 0.5,
-                                        max: (selectedTool == kToolTypeEraser) ? 50.0 : 10.0,
-                                        activeColor: (selectedTool == kToolTypeEraser)
-                                            ? Colors.grey
-                                            : selectedColor,
-                                        value: (selectedTool == kToolTypeEraser)
-                                            ? eraserWidth
-                                            : strokeWidth,
-                                        onChanged: (value) {
-                                          _clearAllSelections();
-                                          setState(() {
-                                            if (selectedTool == kToolTypeEraser) {
-                                              eraserWidth = value;
-                                            } else {
-                                              strokeWidth = value;
-                                            }
-                                          });
-                                        },
+                                      SizedBox(
+                                        width: 150,
+                                        child: Slider(
+                                          min: 0.5,
+                                          max: (selectedTool == kToolTypeEraser) ? 50.0 : 10.0,
+                                          activeColor: (selectedTool == kToolTypeEraser)
+                                              ? Colors.grey
+                                              : selectedColor,
+                                          value: (selectedTool == kToolTypeEraser)
+                                              ? eraserWidth
+                                              : strokeWidth,
+                                          onChanged: (value) {
+                                            _clearAllSelections();
+                                            setState(() {
+                                              if (selectedTool == kToolTypeEraser) {
+                                                eraserWidth = value;
+                                              } else {
+                                                strokeWidth = value;
+                                              }
+                                            });
+                                          },
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-
-                                Text(
-                                  'ความหนา',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black,
-                                    fontFamily: 'NotoSansThai',
+                                    ],
                                   ),
-                                ),
 
-                              ],
-                            ),
+                                  Text(
+                                    'ความหนา',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                      fontFamily: 'NotoSansThai',
+                                    ),
+                                  ),
 
-                            SizedBox(
-                              height: 50,
-                              child: VerticalDivider(
-                                width: 16,
-                                thickness: 1,
-                                color: Colors.grey.shade400,
+                                ],
                               ),
-                            ),
 
-                            SizedBox(width: 5),
+                              SizedBox(
+                                height: 50,
+                                child: VerticalDivider(
+                                  width: 16,
+                                  thickness: 1,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
 
-                            // Undo
-                            DrawToolButton(
-                              icon: Icons.keyboard_arrow_left,
-                              label: 'ย้อนกลับ',
-                              selected: false,
-                              enabled: historyIndex > 0,
-                              onPressed: () {
-                                _clearAllSelections();
-                                _undo();
-                              },
-                            ),
+                              SizedBox(width: 5),
 
-                            SizedBox(width: 5),
+                              // Undo
+                              DrawToolButton(
+                                icon: Icons.keyboard_arrow_left,
+                                label: 'ย้อนกลับ',
+                                selected: false,
+                                enabled: historyIndex > 0,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _undo();
+                                },
+                              ),
 
-                            // Redo
-                            DrawToolButton(
-                              icon: Icons.keyboard_arrow_right,
-                              label: 'ทำซ้ำ',
-                              selected: false,
-                              enabled: historyIndex < history.length - 1,
-                              onPressed: () {
-                                _clearAllSelections();
-                                _redo();
-                              },
-                            ),
+                              SizedBox(width: 5),
 
-                            SizedBox(width: 5),
+                              // Redo
+                              DrawToolButton(
+                                icon: Icons.keyboard_arrow_right,
+                                label: 'ทำซ้ำ',
+                                selected: false,
+                                enabled: historyIndex < history.length - 1,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _redo();
+                                },
+                              ),
 
-                            // Clear
-                            DrawToolButton(
-                              icon: Icons.delete,
-                              label: 'ลบทั้งหมด',
-                              selected: false,
-                              onPressed: () {
-                                _clearAllSelections();
-                                setState(() {
-                                  points.clear();
-                                  _widgetsData.clear();
-                                  _selectedIconIndex = null;
-                                  texts.clear();
-                                  circles.clear();
-                                  shapes.clear();
-                                  curves.clear();
-                                  _pushHistorySnapshot();
-                                });
-                              },
-                            ),
+                              SizedBox(width: 5),
 
-                            SizedBox(width: 5),
-
-                            // Export
-                            DrawToolButton(
-                              icon: Icons.save_rounded,
-                              label: 'Save',
-                              selected: false,
-                              onPressed: () {
-                                _clearAllSelections();
-                                showSaveOptions();
-                              },
-                            ),
-
-                          ],
-                        ),
-
-
-                        SizedBox(height: 10),
-
-                        Divider(
-                          indent: 30,
-                          endIndent: 30,
-                          thickness: 1,
-                          color: Colors.grey.shade400,
-                        ),
-
-                        SizedBox(height: 10),
-
-                        /// เครื่องมือแถวที่ 2
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-
-                            // เส้นอิสระ
-                            DrawToolButton(
-                              icon: Icons.draw_outlined,
-                              label: 'เส้นอิสระ',
-                              selected: selectedTool == kToolTypePen && drawMode == "free",
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleFreeLine();
-                              },
-                            ),
-
-                            SizedBox(width: 10),
-
-                            // เส้นตรง
-                            DrawToolButton(
-                              icon: Icons.horizontal_rule,
-                              label: 'เส้นตรง',
-                              selected: drawMode == "line" && currentLineStyle == LineStyle.solid,
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleLineMode();
-                              },
-                            ),
-
-                            SizedBox(width: 10),
-
-                            // เส้นประ
-                            DrawToolButton(
-                              iconKey: _dashKey,
-                              icon: Icons.linear_scale_outlined,
-                              label: 'เส้นประ',
-                              selected: drawMode == "line" &&
-                                  selectedTool != kToolTypeEraser &&
-                                  currentLineStyle != LineStyle.solid,
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleLineDashed();
-                              },
-                            ),
-
-                            SizedBox(width: 10),
-
-                            // เส้นโค้ง
-                            DrawToolButton(
-                              assetIcon: 'assets/images/icon_curve_black.png',
-                              label: 'เส้นโค้ง',
-                              selected: drawMode == "curve" && currentLineStyle == LineStyle.solid,
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleCurveMode();
-                              },
-                            ),
-
-                            SizedBox(width: 10),
-
-                            // เส้นโค้งประ
-                            DrawToolButton(
-                              iconKey: _curveDashKey,
-                              assetIcon: 'assets/images/icon_curve_dot_black.png',
-                              label: 'เส้นโค้งประ',
-                              selected: drawMode == "curve" && currentLineStyle != LineStyle.solid,
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleCurveDashed();
-                              },
-                            ),
-
-                            SizedBox(width: 10),
-
-                            // วงกลม
-                            DrawToolButton(
-                              icon: Icons.circle_outlined,
-                              label: 'วงกลม',
-                              selected: drawMode == "circle",
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleShapeMode("circle");
-                              },
-                            ),
-
-                            SizedBox(width: 10),
-
-                            // สามเหลี่ยม
-                            DrawToolButton(
-                              icon: Icons.change_history_outlined,
-                              label: 'สามเหลี่ยม',
-                              selected: drawMode == "triangle",
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleShapeMode("triangle");
-                              },
-                            ),
-
-                            SizedBox(width: 10),
-
-                            // สี่เหลี่ยม
-                            DrawToolButton(
-                              icon: Icons.crop_square_outlined,
-                              label: 'สี่เหลี่ยม',
-                              selected: drawMode == "square",
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleShapeMode("square");
-                              },
-                            ),
-
-                            SizedBox(width: 10),
-
-                            // text
-                            DrawToolButton(
-                              icon: Icons.text_fields,
-                              label: 'ข้อความ',
-                              selected: false,
-                              onPressed: () {
-                                setState(() {
-                                  selectedTool = kToolTypeNone;
-                                  drawMode = "";
-                                  isDrawing = false;
-
-                                  texts.add({
-                                    'position': const Offset(120, 120),
-                                    'text': '',
-                                    'scale': 1.0,
-                                    'selected': true,
-                                    'rotation': 0.0,
-                                    'color': selectedColor.value,
+                              // Clear
+                              DrawToolButton(
+                                icon: Icons.delete,
+                                label: 'ลบทั้งหมด',
+                                selected: false,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  setState(() {
+                                    points.clear();
+                                    _widgetsData.clear();
+                                    _selectedIconIndex = null;
+                                    texts.clear();
+                                    circles.clear();
+                                    shapes.clear();
+                                    curves.clear();
+                                    _pushHistorySnapshot();
                                   });
-                                  _newTextIndex = texts.length - 1;
-                                });
-                                _pushHistorySnapshot();
+                                },
+                              ),
 
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  if (mounted) setState(() => _newTextIndex = null);
-                                });
-                              },
-                            ),
+                              SizedBox(width: 5),
 
-                            SizedBox(width: 10),
+                              // Export
+                              DrawToolButton(
+                                icon: Icons.save_rounded,
+                                label: 'Save',
+                                selected: false,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  showSaveOptions();
+                                },
+                              ),
 
-                            // ปุ่ม Icons
-                            DrawToolButton(
-                              iconKey: _drawIconKey,
-                              icon: Icons.emoji_symbols,
-                              label: 'Icons',
-                              selected: false,
-                              onPressed: () {
-                                _clearAllSelections();
-                                _showDrawIconPopup();
-                              },
-                            ),
+                            ],
+                          ),
 
-                            SizedBox(width: 10),
 
-                            // ยางลบ
-                            DrawToolButton(
-                              assetIcon: 'assets/images/eraser_black.PNG',
-                              label: 'ยางลบ',
-                              selected: selectedTool == kToolTypeEraser && drawMode == "free",
-                              onPressed: () {
-                                _clearAllSelections();
-                                _toggleEraser();
-                              },
-                            ),
+                          SizedBox(height: 10),
 
-                          ],
-                        ),
+                          Divider(
+                            indent: 30,
+                            endIndent: 30,
+                            thickness: 1,
+                            color: Colors.grey.shade400,
+                          ),
 
-                      ],
-                    ),
-                  )
-                ],
+                          SizedBox(height: 10),
+
+                          /// เครื่องมือแถวที่ 2
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+
+                              // เส้นอิสระ
+                              DrawToolButton(
+                                icon: Icons.draw_outlined,
+                                label: 'เส้นอิสระ',
+                                selected: selectedTool == kToolTypePen && drawMode == "free",
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleFreeLine();
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // เส้นตรง
+                              DrawToolButton(
+                                icon: Icons.horizontal_rule,
+                                label: 'เส้นตรง',
+                                selected: drawMode == "line" && currentLineStyle == LineStyle.solid,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleLineMode();
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // เส้นประ
+                              DrawToolButton(
+                                iconKey: _dashKey,
+                                icon: Icons.linear_scale_outlined,
+                                label: 'เส้นประ',
+                                selected: drawMode == "line" &&
+                                    selectedTool != kToolTypeEraser &&
+                                    currentLineStyle != LineStyle.solid,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleLineDashed();
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // เส้นโค้ง
+                              DrawToolButton(
+                                assetIcon: 'assets/images/icon_curve_black.png',
+                                label: 'เส้นโค้ง',
+                                selected: drawMode == "curve" && currentLineStyle == LineStyle.solid,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleCurveMode();
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // เส้นโค้งประ
+                              DrawToolButton(
+                                iconKey: _curveDashKey,
+                                assetIcon: 'assets/images/icon_curve_dot_black.png',
+                                label: 'เส้นโค้งประ',
+                                selected: drawMode == "curve" && currentLineStyle != LineStyle.solid,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleCurveDashed();
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // วงกลม
+                              DrawToolButton(
+                                icon: Icons.circle_outlined,
+                                label: 'วงกลม',
+                                selected: drawMode == "circle",
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleShapeMode("circle");
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // สามเหลี่ยม
+                              DrawToolButton(
+                                icon: Icons.change_history_outlined,
+                                label: 'สามเหลี่ยม',
+                                selected: drawMode == "triangle",
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleShapeMode("triangle");
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // สี่เหลี่ยม
+                              DrawToolButton(
+                                icon: Icons.crop_square_outlined,
+                                label: 'สี่เหลี่ยม',
+                                selected: drawMode == "square",
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleShapeMode("square");
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // text
+                              DrawToolButton(
+                                icon: Icons.text_fields,
+                                label: 'ข้อความ',
+                                selected: false,
+                                onPressed: () {
+                                  setState(() {
+                                    selectedTool = kToolTypeNone;
+                                    drawMode = "";
+                                    isDrawing = false;
+
+                                    texts.add({
+                                      'position': const Offset(120, 120),
+                                      'text': '',
+                                      'scale': 1.0,
+                                      'selected': true,
+                                      'rotation': 0.0,
+                                      'color': selectedColor.value,
+                                    });
+                                    _newTextIndex = texts.length - 1;
+                                  });
+                                  _pushHistorySnapshot();
+
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _newTextIndex = null);
+                                  });
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // ปุ่ม Icons
+                              DrawToolButton(
+                                iconKey: _drawIconKey,
+                                icon: Icons.emoji_symbols,
+                                label: 'Icons',
+                                selected: false,
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _showDrawIconPopup();
+                                },
+                              ),
+
+                              SizedBox(width: 10),
+
+                              // ยางลบ
+                              DrawToolButton(
+                                assetIcon: 'assets/images/eraser_black.PNG',
+                                label: 'ยางลบ',
+                                selected: selectedTool == kToolTypeEraser && drawMode == "free",
+                                onPressed: () {
+                                  _clearAllSelections();
+                                  _toggleEraser();
+                                },
+                              ),
+
+                            ],
+                          ),
+
+                        ],
+                      ),
+                    )
+                  ],
+                ),
               ),
             ),
-          ),
 
 
-          /// ── ปุ่ม layers มุมบนขวา ────────────────────────────────
-          Positioned(
-            top: 55,
-            right: 8,
-            child: Material(
-                color: Colors.white,
-                shape: CircleBorder(),
-                elevation: 4,
-                child: IconButton(
-                  tooltip: 'Layers',
-                  constraints: BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32
-                  ),
-                  padding: EdgeInsets.zero,
-
-                  iconSize: 20.0,
-
-                  onPressed: () {
-                    setState(() {
-                      isLayerMenuOpen = !isLayerMenuOpen;
-                    });
-                  },
-                  icon: Icon(Icons.layers),
-                  color: Colors.black,
-                )
-            ),
-          ),
-
-          /// ── Checkbox ────────────────────────────────
-          if (isLayerMenuOpen)
+            /// ── ปุ่ม layers มุมบนขวา ────────────────────────────────
             Positioned(
-                top: 45,
-                right: 8,
-                child: Material(
-                  elevation: 10,
-                  shadowColor: Colors.black.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(20),
+              top: 55,
+              right: 8,
+              child: Material(
                   color: Colors.white,
-                  child: Container(
-                    width: 220,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade200, width: 1),
+                  shape: CircleBorder(),
+                  elevation: 4,
+                  child: IconButton(
+                    tooltip: 'Layers',
+                    constraints: BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                    padding: EdgeInsets.zero,
 
-                        _LayerPanelHeader(
-                          onClose: () => setState(() => isLayerMenuOpen = false),
-                        ),
+                    iconSize: 20.0,
 
-                        const Divider(height: 1, indent: 14, endIndent: 14),
-
-                        const SizedBox(height: 6),
-
-                        _LayerToggleTile(
-                          icon: Icons.grid_on_outlined,
-                          label: 'Grid paper',
-                          value: grid_paper_Layer,
-                          onChanged: (v) => setState(() => grid_paper_Layer = v),
-                        ),
-
-                        const SizedBox(height: 10),
-                      ],
-                    ),
-                  ),
-                )
+                    onPressed: () {
+                      setState(() {
+                        isLayerMenuOpen = !isLayerMenuOpen;
+                      });
+                    },
+                    icon: Icon(Icons.layers),
+                    color: Colors.black,
+                  )
+              ),
             ),
 
-        ],
+            /// ── Checkbox ────────────────────────────────
+            if (isLayerMenuOpen)
+              Positioned(
+                  top: 45,
+                  right: 8,
+                  child: Material(
+                    elevation: 10,
+                    shadowColor: Colors.black.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white,
+                    child: Container(
+                      width: 220,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200, width: 1),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+
+                          _LayerPanelHeader(
+                            onClose: () => setState(() => isLayerMenuOpen = false),
+                          ),
+
+                          const Divider(height: 1, indent: 14, endIndent: 14),
+
+                          const SizedBox(height: 6),
+
+                          _LayerToggleTile(
+                            icon: Icons.grid_on_outlined,
+                            label: 'Grid paper',
+                            value: grid_paper_Layer,
+                            onChanged: (v) => setState(() => grid_paper_Layer = v),
+                          ),
+
+                          const SizedBox(height: 10),
+                        ],
+                      ),
+                    ),
+                  )
+              ),
+
+          ],
+        ),
       ),
     );
   }
@@ -2765,8 +2795,9 @@ class _Note_CreateNewPointState extends State<Note_CreateNewPoint> {
             text: "บันทึกรายละเอียดเพิ่มเติมสำเร็จ",
             assets_image: "assets/images/checkmark.png",
             onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // ปิด alert
+              _allowPop = true;            // บันทึกแล้ว ออกได้โดยไม่ต้องถาม
+              Navigator.of(context).pop(); // ออกจากหน้า
             },
             text_button: "ตกลง",
           ),

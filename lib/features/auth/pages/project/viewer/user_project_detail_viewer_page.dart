@@ -71,6 +71,12 @@ class _User_Project_Detail_Viewer_PageState extends State<User_Project_Detail_Vi
   }
 
 
+  /// ── เรียงสมาชิกตาม email ──────────────────
+  List<UserModel> _sortByEmail(List<UserModel> users) {
+    return users
+      ..sort((a, b) => a.email.toLowerCase().compareTo(b.email.toLowerCase()));
+  }
+
   /// ── โหลดสมาชิกที่ผ่านการอนุมัติ ──────────────────
   Future<void> _loadMembers() async {
     if (_membersLoaded) return;
@@ -88,9 +94,9 @@ class _User_Project_Detail_Viewer_PageState extends State<User_Project_Detail_Vi
         token: authState.userModel.token,
         ids: _project.memberIds,
       );
-      final members =
-      allUsers.where((u) => _project.memberIds.contains(u.id)).toList();
-
+      final members = _sortByEmail(
+        allUsers.where((u) => _project.memberIds.contains(u.id)).toList(),
+      );
 
       if (mounted) setState(() {
         _members = members;
@@ -99,9 +105,9 @@ class _User_Project_Detail_Viewer_PageState extends State<User_Project_Detail_Vi
     } catch (_) {
       final authLocal = AuthLocalRepository();
       final localUsers = await authLocal.getApprovedUsers();
-      final members = localUsers
-          .where((u) => _project.memberIds.contains(u.id))
-          .toList();
+      final members = _sortByEmail(
+        localUsers.where((u) => _project.memberIds.contains(u.id)).toList(),
+      );
 
       if (mounted) setState(() {
         _members = members;

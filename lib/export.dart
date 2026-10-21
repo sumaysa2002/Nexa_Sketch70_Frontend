@@ -75,6 +75,7 @@ export 'package:offline_gnss69_new/features/auth/pages/point/point_detail_viewer
 export 'package:offline_gnss69_new/features/auth/pages/profile/profile_edit_page.dart';
 export 'package:offline_gnss69_new/features/auth/pages/profile/profile_page.dart';
 export 'features/auth/pages/profile/profile_reset_password_page.dart';
+export 'package:offline_gnss69_new/features/auth/pages/profile/signature_page.dart';
 
 export 'package:offline_gnss69_new/features/auth/pages/project/create_new_project_page.dart';
 export 'package:offline_gnss69_new/features/auth/pages/project/edit_project_page.dart';
