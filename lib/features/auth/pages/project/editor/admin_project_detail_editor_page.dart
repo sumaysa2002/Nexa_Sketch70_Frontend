@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:offline_gnss69_new/export.dart';
 
 class Admin_Project_Detail_Editor_Page extends StatefulWidget {
@@ -34,8 +36,12 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
   bool _membersLoaded = false;
 
 
+  // sync เสร็จ >> โหลดรายการหมุดใหม่
+  StreamSubscription<SyncResult>? _syncedSub;
+
   @override
   void dispose() {
+    _syncedSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -60,17 +66,22 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPoints());
+
+    _syncedSub = SyncService.instance.onSynced.listen((_) {
+      if (mounted) _loadPoints(silent: true);
+    });
   }
 
 
 
   /// ── โหลด Points ───────────────────────────────────────────
-  void _loadPoints() {
+  void _loadPoints({bool silent = false}) {
     final authState = context.read<AuthCubit>().state;
     if (authState is! AuthLoggedIn) return;
     context.read<PointTaskCubit>().getPoints(
       token: authState.userModel.token,
       projectId: _project.id,
+      silent: silent,
     );
   }
 
@@ -210,7 +221,7 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
           showDialog(
             context: context,
             builder: (_) => alert_image_one_button(
-                text: "ไม่สามารถลบโครงการได้\nเนื่องจากอยู่ในโหมด offline",
+                text: "ไม่สามารถลบโครงการได้\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
                 assets_image: "assets/images/no_wifi.png",
                 onPressed: () => Navigator.of(context).pop(),
                 text_button: "ตกลง"
@@ -412,7 +423,7 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
                             context: context,
                             barrierDismissible: false,
                             builder: (_) => alert_image_one_button(
-                              text: "ไม่สามารถสร้างหมุดรังวัดได้\nเนื่องจากอยู่ในโหมด offline",
+                              text: "ไม่สามารถสร้างหมุดรังวัดได้\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
                               assets_image: "assets/images/no_wifi.png",
                               onPressed: () => Navigator.of(context).pop(),
                               text_button: "ตกลง",

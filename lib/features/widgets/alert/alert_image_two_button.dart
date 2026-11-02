@@ -15,7 +15,7 @@ class alert_image_two_button extends StatelessWidget {
     required this.assets_image,
     this.height = 120,
     required this.one_text_button,
-    this.one_fontWeight = FontWeight.w500,
+    this.one_fontWeight = FontWeight.w600,
     required this.one_onPressed,
     required this.two_text_button,
     required this.two_onPressed,
@@ -42,7 +42,7 @@ class alert_image_two_button extends StatelessWidget {
       content: StatefulBuilder(
         builder: (context, setState) {
           return SizedBox(
-            width: MediaQuery.of(context).size.width * 0.5, // 50% ของความกว้างหน้าจอ
+            width: MediaQuery.of(context).size.width * 0.5,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -54,7 +54,7 @@ class alert_image_two_button extends StatelessWidget {
                   text,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: one_fontWeight,
                     fontFamily: 'NotoSansThai',
                   ),

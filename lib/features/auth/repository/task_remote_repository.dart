@@ -1,7 +1,49 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:math';
+
 import 'package:http/http.dart' as http;
 import 'package:offline_gnss69_new/export.dart';
 
+/// offline >> server ปลายทางไม่พร้อม (gateway 502/503/504)
+class _ServerUnavailableException implements Exception {
+  const _ServerUnavailableException();
+}
+
 class TaskRemoteRepository {
+
+  /* ============================================================
+    Server Error / Time Out
+  ============================================================ */
+  /// ── error จาก server ─────────────
+  static bool _isOfflineError(Object e) =>
+      e is SocketException ||
+          e is TimeoutException ||
+          e is HandshakeException ||
+          e is http.ClientException ||
+          e is _ServerUnavailableException;
+
+  /// ── ดึงข้อความ error จาก response ──
+  static String _errorFrom(http.Response res, String fallback) {
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map && body['error'] is String) return body['error'] as String;
+    } catch (_) {}
+    return fallback;
+  }
+
+  /// ── gateway ตอบแทน server ที่ล่ม (502/503/504) >> ถือว่า offline ──
+  static http.Response _checkGateway(http.Response res) {
+    if (res.statusCode == 502 || res.statusCode == 503 || res.statusCode == 504) {
+      throw const _ServerUnavailableException();
+    }
+    return res;
+  }
+
+  static const _timeout     = Duration(seconds: 15);
+  static const _syncTimeout = Duration(seconds: 30);
+
+
 
   final taskLocalRepository = TaskLocalRepository();
 
@@ -40,7 +82,13 @@ class TaskRemoteRepository {
     List<int> memberIds = const [],
   }) async {
 
-    try{
+    // ผู้สร้างโครงการ (admin)
+    final currentUser = await AuthLocalRepository().getUser();
+
+    // // ถ้า server สร้างไปแล้วแต่ response หาย
+    final clientUuid = generateClientUuid();
+
+    try {
       final res = await http.post(
         Uri.parse("${Constants.backendUri}/tasks/create_project"),
         headers: {
@@ -48,6 +96,8 @@ class TaskRemoteRepository {
           'x-auth-token': token,
         },
         body: jsonEncode({
+          'client_uuid':        clientUuid,
+
           'name_project_id':    nameProjectId,
           'project_name':       projectName,
           'project_details':    projectDetails,
@@ -62,46 +112,55 @@ class TaskRemoteRepository {
           'project_note':       projectNote,
           'member_ids':         memberIds,
         }),
-      );
+      ).timeout(_timeout).then(_checkGateway);
 
+      // ไม่บันทึก offline >> error อื่นจาก server (400 / 401 / 403 / 500)
       if (res.statusCode != 201) {
-        throw jsonDecode(res.body)['error'] ?? 'สร้างโครงการไม่สำเร็จ';
+        throw ServerException(res.statusCode, _errorFrom(res, 'สร้างโครงการไม่สำเร็จ'));
       }
 
-      final project = ProjectModel.fromJson(jsonDecode(res.body));
+      final project = ProjectModel.fromJson(jsonDecode(res.body)).copyWith(
+        memberIds:          memberIds,
+        creatorAdminId:     currentUser?.id,
+        projectTimeCreated: DateTime.now().toUtc().toIso8601String(),
+      );
 
-      // cache โครงการที่สร้างสำเร็จ >> ลง SQLite
-      await taskLocalRepository.insertProject(project);
+      // cache ลง SQLite
+      try {
+        await taskLocalRepository.insertProject(project);
+      } catch (e) {
+        if (kDebugMode) debugPrint('createProject cache error: $e');
+      }
 
       return project;
 
     } catch (e) {
+      // ไม่ใช่ปัญหาการเชื่อมต่อ >> ส่ง error ต่อให้หน้าจอแสดง
+      if (!_isOfflineError(e)) rethrow;
 
-      try {
-        // ถ้า API fail >> บันทึกลง SQLite >> sync ทีหลัง
-        final offlineProject = ProjectModel(
-          id:                 -DateTime.now().millisecondsSinceEpoch, // temp id
-          nameProjectId:      nameProjectId,
-          projectName:        projectName,
-          projectDetails:     projectDetails,
-          province:           province,
-          sensor:             sensor,
-          gsdNum:             gsdNum,
-          gsdUnit:            gsdUnit,
-          surveyMain:         surveyMain,
-          surveySub:          surveySub,
-          projectStartDate:   projectStartDate,
-          projectEndDate:     projectEndDate,
-          projectNote:        projectNote,
-          memberIds:          memberIds,
-          projectTimeCreated: DateTime.now().toIso8601String(),
-        );
+      // ติดต่อ server ไม่ได้ >> บันทึกลง SQLite แล้ว sync ทีหลัง
+      final offlineProject = ProjectModel(
+        id:                 -DateTime.now().millisecondsSinceEpoch, // temp id
+        nameProjectId:      nameProjectId,
+        projectName:        projectName,
+        projectDetails:     projectDetails,
+        province:           province,
+        sensor:             sensor,
+        gsdNum:             gsdNum,
+        gsdUnit:            gsdUnit,
+        surveyMain:         surveyMain,
+        surveySub:          surveySub,
+        projectStartDate:   projectStartDate,
+        projectEndDate:     projectEndDate,
+        projectNote:        projectNote,
+        memberIds:          memberIds,
+        projectTimeCreated: DateTime.now().toUtc().toIso8601String(),
+        creatorAdminId:     currentUser?.id,
+        clientUuid:         clientUuid,
+      );
 
-        await taskLocalRepository.insertProject(offlineProject, isSynced: 1);
-        return offlineProject;
-      } catch (e) {
-        rethrow;
-      }
+      await taskLocalRepository.insertProject(offlineProject, isSynced: 1);
+      return offlineProject;
     }
   }
 
@@ -109,8 +168,8 @@ class TaskRemoteRepository {
   /// ── ดึงโครงการทั้งหมด แยกตาม Admin (เรียงจากใหม่ >> เก่า) ────────────────────────────
   Future<List<ProjectModel>> getProjects({required String token}) async {
     try {
-      // sync โครงการที่ค้างก่อน
-      await syncProjects(token: token);
+      // sync ข้อมูลที่ค้างก่อน
+      await SyncService.instance.syncAll(token);
 
       final res = await http.get(
         Uri.parse("${Constants.backendUri}/tasks/projects"),
@@ -129,7 +188,16 @@ class TaskRemoteRepository {
 
       await taskLocalRepository.upsertProjects(projects);
 
-      return projects;
+      // รวมโครงการที่สร้าง แก้ไข ตอน offline
+      final pendingCreate = await taskLocalRepository.getUnsyncedProjects(includeBlocked: true);
+      final pendingUpdate = {
+        for (final p in await taskLocalRepository.getUpdatedPendingProjects(includeBlocked: true)) p.id: p,
+      };
+
+      return [
+        ...pendingCreate,
+        for (final p in projects) pendingUpdate[p.id] ?? p,
+      ];
     } catch (e) {
       final localProjects = await taskLocalRepository.getProjects();
       return localProjects;
@@ -156,72 +224,95 @@ class TaskRemoteRepository {
     String? userRole,
     List<int> memberIds = const [],
   }) async {
-    try {
+    // ข้อมูลเดิมในเครื่อง >> และใช้ตอนบันทึก offline
+    final existing = (await taskLocalRepository.getProjects())
+        .where((p) => p.id == projectId)
+        .firstOrNull;
 
+    ProjectModel buildLocal() => ProjectModel(
+      id:                 projectId,
+      nameProjectId:      nameProjectId,
+      projectName:        projectName,
+      projectDetails:     projectDetails,
+      province:           province,
+      sensor:             sensor,
+      gsdNum:             gsdNum,
+      gsdUnit:            gsdUnit,
+      surveyMain:         surveyMain,
+      surveySub:          surveySub,
+      projectStartDate:   projectStartDate,
+      projectEndDate:     projectEndDate,
+      projectNote:        projectNote,
+      memberIds:          memberIds,
+      userRole:           userRole ?? existing?.userRole,
+      projectTimeCreated: existing?.projectTimeCreated,
+      creatorAdminId:     existing?.creatorAdminId,
+      clientUuid:         existing?.clientUuid,
+    );
+
+    // โครงการที่สร้างตอน offline
+    if (projectId < 0) {
+      final offlineProject = buildLocal();
+      await taskLocalRepository.updateProject(offlineProject, resetSyncError: true);
+      return offlineProject;
+    }
+
+    try {
       final res = await http.put(
         Uri.parse("${Constants.backendUri}/tasks/update_project/$projectId"),
         headers: {
           'Content-Type': 'application/json',
           'x-auth-token': token,
         },
-        body: jsonEncode({
-          'name_project_id':    nameProjectId,
-          'project_name':       projectName,
-          'project_details':    projectDetails,
-          'province':           province,
-          'sensor':             sensor,
-          'gsd_num':            gsdNum,
-          'gsd_unit':           gsdUnit,
-          'survey_main':        surveyMain,
-          'survey_sub':         surveySub,
-          'project_start_date': projectStartDate,
-          'project_end_date':   projectEndDate,
-          'project_note':       projectNote,
-          'member_ids':         memberIds,
-        }),
-      );
+        body: jsonEncode(_updateBody(buildLocal())),
+      ).timeout(_timeout).then(_checkGateway);
 
       if (res.statusCode != 200) {
-        throw jsonDecode(res.body)['error'] ?? 'แก้ไขโครงการไม่สำเร็จ';
+        throw ServerException(res.statusCode, _errorFrom(res, 'แก้ไขโครงการไม่สำเร็จ'));
       }
 
       final project = ProjectModel.fromJson(jsonDecode(res.body)).copyWith(
-        userRole:  userRole,
-        memberIds: memberIds,
+        userRole:           userRole ?? existing?.userRole,
+        memberIds:          memberIds,
+        creatorAdminId:     existing?.creatorAdminId,
+        projectTimeCreated: existing?.projectTimeCreated,
       );
 
-      await taskLocalRepository.updateProject(project);
-
+      // cache ลง SQLite
+      try {
+        await taskLocalRepository.updateProject(project);
+      } catch (e) {
+        if (kDebugMode) debugPrint('updateProject cache error: $e');
+      }
       return project;
 
     } catch (e) {
-      // ดึงข้อมูลจาก SQLite เพื่อเอา projectTimeCreated และ userRole
-      final existingProjects = await taskLocalRepository.getProjects();
-      final existing = existingProjects.where((p) => p.id == projectId).firstOrNull;
+      // ไม่บันทึก offline >> ส่ง error
+      if (!_isOfflineError(e)) rethrow;
 
-      // ถ้า API fail >> บันทึกลง SQLite >> sync ทีหลัง
-      final offlineProject = ProjectModel(
-        id:               projectId,
-        nameProjectId:    nameProjectId,
-        projectName:      projectName,
-        projectDetails:   projectDetails,
-        province:         province,
-        sensor:           sensor,
-        gsdNum:           gsdNum,
-        gsdUnit:          gsdUnit,
-        surveyMain:       surveyMain,
-        surveySub:        surveySub,
-        projectStartDate: projectStartDate,
-        projectEndDate:   projectEndDate,
-        projectNote:      projectNote,
-        memberIds:        memberIds,
-        userRole:         userRole ?? existing?.userRole,
-        projectTimeCreated: existing?.projectTimeCreated,
-      );
+      // ติดต่อ server ไม่ได้ >> บันทึกลง SQLite >> sync ทีหลัง
+      final offlineProject = buildLocal();
       await taskLocalRepository.updateProjectPending(offlineProject);
       return offlineProject;
     }
   }
+
+  /// ── update project (updateProject และ syncUpdatedProjects) ──
+  static Map<String, dynamic> _updateBody(ProjectModel p) => {
+    'name_project_id':    p.nameProjectId,
+    'project_name':       p.projectName,
+    'project_details':    p.projectDetails,
+    'province':           p.province,
+    'sensor':             p.sensor,
+    'gsd_num':            p.gsdNum,
+    'gsd_unit':           p.gsdUnit,
+    'survey_main':        p.surveyMain,
+    'survey_sub':         p.surveySub,
+    'project_start_date': p.projectStartDate,
+    'project_end_date':   p.projectEndDate,
+    'project_note':       p.projectNote,
+    'member_ids':         p.memberIds,
+  };
 
 
   /// ── ลบโครงการ (admin เท่านั้นที่ลบได้) >> ใช้ id project ในการลบ ────────────
@@ -247,84 +338,142 @@ class TaskRemoteRepository {
     ส่วนจัดการ sync Projects
   ============================================================ */
   /// ── sync โครงการที่สร้างขณะ offline ขึ้น server ────────────────────────────
-  Future<bool> syncProjects({required String token}) async {
-    try {
+  Future<SyncResult> syncProjects({
+    required String token,
+    bool includeBlocked = false,
+  }) async {
+    final result = SyncResult();
 
-      // ดึงโครงการที่ยังไม่ได้ sync
-      final unsyncedProjects = await taskLocalRepository.getUnsyncedProjects();
-      if (unsyncedProjects.isEmpty) return true;
+    final raw = await taskLocalRepository.getUnsyncedProjects(includeBlocked: includeBlocked);
+    if (raw.isEmpty) return result;
 
-      // แปลงเป็น List<Map> แล้วส่งทีเดียวทั้ง array
-      final projectListInMap = unsyncedProjects.map((p) => p.toJson()).toList();
-
-      final res = await http.post(
-        Uri.parse("${Constants.backendUri}/tasks/sync_projects"),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-auth-token': token,
-        },
-        body: jsonEncode(projectListInMap),
-      );
-
-      if (res.statusCode != 201) {
-        throw jsonDecode(res.body)['error'];
-      }
-
-      for (final project in unsyncedProjects) {
-        await taskLocalRepository.deleteProject(project.id);
-      }
-
-      return true;
-    } catch (e) {
-      if (kDebugMode) debugPrint('syncProjects error: $e');
-      return false;
+    // ต้องมี client uuid
+    final unsynced = <ProjectModel>[];
+    for (final p in raw) {
+      unsynced.add(await taskLocalRepository.ensureClientUuid(p));
     }
+
+    // server รับครั้งละไม่เกิน 50 โครงการ
+    for (var i = 0; i < unsynced.length; i += 50) {
+      final chunk = unsynced.sublist(i, min(i + 50, unsynced.length));
+      try {
+        result.add(await _syncProjectChunk(token, chunk));
+      } catch (e) {
+        if (_isOfflineError(e)) {
+          result.offline = true;
+          return result;
+        }
+        // error ทั้งชุด (เช่น 403 ไม่ใช่ admin / 500) >> บันทึกทุกแถวในชุดนี้
+        final permanent = e is ServerException && e.isPermanent;
+        final message = safeErrorMessage(e, fallback: 'sync โครงการไม่สำเร็จ');
+        for (final p in chunk) {
+          await taskLocalRepository.markSyncError(p.id, message, blocked: permanent);
+          result.failed++;
+        }
+        if (kDebugMode) debugPrint('syncProjects error: $e');
+      }
+    }
+    return result;
+  }
+
+  Future<SyncResult> _syncProjectChunk(String token, List<ProjectModel> chunk) async {
+    final result = SyncResult();
+
+    final res = await http.post(
+      Uri.parse("${Constants.backendUri}/tasks/sync_projects"),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token,
+      },
+      body: jsonEncode(chunk.map((p) => p.toJson()).toList()),
+    ).timeout(_syncTimeout).then(_checkGateway);
+
+    if (res.statusCode != 200) {
+      throw ServerException(res.statusCode, _errorFrom(res, 'sync โครงการไม่สำเร็จ'));
+    }
+
+    final body = jsonDecode(res.body);
+    final List<dynamic> items = body is Map ? (body['results'] as List<dynamic>? ?? []) : [];
+
+    final byUuid = {for (final p in chunk) p.clientUuid!: p};
+
+    for (final item in items) {
+      if (item is! Map) continue;
+      final local = byUuid[item['client_uuid']];
+      if (local == null) continue;
+
+      if (item['status'] == 'created' || item['status'] == 'exists') {
+        // response มาจากตาราง projects อย่างเดียว
+        final synced = ProjectModel.fromJson(Map<String, dynamic>.from(item['project'] as Map)).copyWith(
+          memberIds:          local.memberIds,
+          userRole:           local.userRole,
+          creatorAdminId:     local.creatorAdminId,
+          projectTimeCreated: local.projectTimeCreated,
+          clientUuid:         local.clientUuid,
+        );
+        await taskLocalRepository.replaceTempWithSynced(local.id, synced);
+        result.synced++;
+      } else {
+        await taskLocalRepository.markSyncError(
+          local.id,
+          (item['error'] as String?) ?? 'sync โครงการไม่สำเร็จ',
+          blocked: true,
+        );
+        result.failed++;
+      }
+    }
+    return result;
   }
 
 
   /// ── sync โครงการที่แก้ไขขณะ offline ขึ้น server ────────────────────────────
-  Future<bool> syncUpdatedProjects({required String token}) async {
-    try {
-      final pendingProjects = await taskLocalRepository.getUpdatedPendingProjects();
-      if (pendingProjects.isEmpty) return true;
+  Future<SyncResult> syncUpdatedProjects({
+    required String token,
+    bool includeBlocked = false,
+  }) async {
+    final result = SyncResult();
+    final pendingProjects =
+    await taskLocalRepository.getUpdatedPendingProjects(includeBlocked: includeBlocked);
 
-      for (final project in pendingProjects) {
-        try {
-          final res = await http.put(
-            Uri.parse("${Constants.backendUri}/tasks/update_project/${project.id}"),
-            headers: {
-              'Content-Type': 'application/json',
-              'x-auth-token': token,
-            },
-            body: jsonEncode({
-              'name_project_id':    project.nameProjectId,
-              'project_name':       project.projectName,
-              'project_details':    project.projectDetails,
-              'province':           project.province,
-              'sensor':             project.sensor,
-              'gsd_num':            project.gsdNum,
-              'gsd_unit':           project.gsdUnit,
-              'survey_main':        project.surveyMain,
-              'survey_sub':         project.surveySub,
-              'project_start_date': project.projectStartDate,
-              'project_end_date':   project.projectEndDate,
-              'project_note':       project.projectNote,
-              'member_ids':         project.memberIds,
-            }),
-          );
-
-          if (res.statusCode == 200) {
-            // sync สำเร็จ >> is_updated_pending = 0
-            await taskLocalRepository.markUpdateSynced(project.id);
-          }
-        } catch (_) {
-          continue;
-        }
+    for (final project in pendingProjects) {
+      // โครงการ offline ยังไม่มีบน server
+      if (project.id < 0) {
+        await taskLocalRepository.markUpdateSynced(project.id);
+        continue;
       }
-      return true;
-    } catch (e) {
-      return false;
+
+      try {
+        final res = await http.put(
+          Uri.parse("${Constants.backendUri}/tasks/update_project/${project.id}"),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token,
+          },
+          body: jsonEncode(_updateBody(project)),
+        ).timeout(_timeout).then(_checkGateway);
+
+        if (res.statusCode != 200) {
+          throw ServerException(res.statusCode, _errorFrom(res, 'แก้ไขโครงการไม่สำเร็จ'));
+        }
+
+        // sync สำเร็จ >> is_updated_pending = 0
+        await taskLocalRepository.markUpdateSynced(project.id);
+        result.synced++;
+
+      } catch (e) {
+        if (_isOfflineError(e)) {
+          result.offline = true;
+          break;
+        }
+        final permanent = e is ServerException && e.isPermanent;
+        final message = (e is ServerException && e.statusCode == 404)
+            ? 'ไม่พบโครงการนี้ในระบบ'
+            : safeErrorMessage(e, fallback: 'แก้ไขโครงการไม่สำเร็จ');
+        await taskLocalRepository.markSyncError(project.id, message, blocked: permanent);
+        result.failed++;
+      }
     }
+    return result;
   }
 
 }

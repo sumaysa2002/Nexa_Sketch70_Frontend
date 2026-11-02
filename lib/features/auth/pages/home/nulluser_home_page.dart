@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:offline_gnss69_new/export.dart';
 
 class NullUser_Home_Page extends StatefulWidget {
@@ -22,8 +24,13 @@ class _NullUser_Home_PageState extends State<NullUser_Home_Page> {
   bool _isOnline = true;
 
 
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  StreamSubscription<SyncResult>? _syncedSub;
+
   @override
   void dispose() {
+    _connectivitySub?.cancel();
+    _syncedSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -40,13 +47,15 @@ class _NullUser_Home_PageState extends State<NullUser_Home_Page> {
 
       AuthRemoteRepository().getAllUsers(token: token).catchError((_) {});
 
-      context.read<TaskCubit>().syncUpdatedProjects(token: token).then((_) {
-        if (mounted) {
-          context.read<TaskCubit>().getAllProjects(token: token);
-        }
-      });
+      // โหลดรายการโครงการ
+      context.read<TaskCubit>().getAllProjects(token: token);
 
       context.read<AuthCubit>().syncPendingUser(token: token).catchError((_) {});
+
+      // sync เสร็จและมีข้อมูลขึ้น server >> โหลดรายการโครงการใหม่
+      _syncedSub = SyncService.instance.onSynced.listen((_) {
+        if (mounted) context.read<TaskCubit>().getAllProjects(token: token);
+      });
 
       // เช็คสถานะ internet
       Connectivity().checkConnectivity().then((result) {
@@ -58,24 +67,11 @@ class _NullUser_Home_PageState extends State<NullUser_Home_Page> {
         }
       });
 
-      // การเปลี่ยนแปลง internet
-      Connectivity().onConnectivityChanged.listen((data) async {
+      // การเปลี่ยนแปลง internet >> อัปเดตแค่สถานะบนหน้าจอ
+      _connectivitySub = Connectivity().onConnectivityChanged.listen((data) {
         final online = data.contains(ConnectivityResult.wifi) ||
             data.contains(ConnectivityResult.mobile);
-
-        // online / offline
-        if (mounted) {
-          setState(() {
-            _isOnline = online;
-          });
-        }
-
-        if (online) {
-          await context.read<TaskCubit>().syncProjects(token: token);
-          if (mounted) {
-            context.read<TaskCubit>().getAllProjects(token: token);
-          }
-        }
+        if (mounted) setState(() => _isOnline = online);
       });
 
     }

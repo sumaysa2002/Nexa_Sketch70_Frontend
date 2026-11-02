@@ -27,3 +27,18 @@ String safeErrorMessage(
 
   return fallback;
 }
+
+/// ── error ที่ server ตอบกลับมา (มี status code) ─────────────────────
+class ServerException extends AppException {
+  final int statusCode;
+
+  ServerException(this.statusCode, String message) : super(message);
+
+  /// error
+  bool get isPermanent =>
+      statusCode >= 400 &&
+          statusCode < 500 &&
+          statusCode != 401 && // token หมดอายุ >> login ใหม่แล้วส่งได้
+          statusCode != 408 &&
+          statusCode != 429;
+}

@@ -35,7 +35,6 @@ class AuthRemoteRepository {
 
   /// ── ส่งรหัส OTP ไปยัง email ──────────────────────────────────────
   /// purpose: 'signup' | 'login' | 'reset_password'
-  /// previousHash: ต้องส่งเมื่อ purpose = 'login' (ขอ OTP Login ใหม่)
   Future<String> sendOtp({
     required String email,
     String purpose = 'signup',
@@ -67,18 +66,18 @@ class AuthRemoteRepository {
       return data['hash'];
     }
 
-    // ครบโควตา / ขอถี่เกินไป → แนบเวลาที่ต้องรอ ให้หน้า OTP ล็อกปุ่ม Resend
+    // ครบโควตา / ขอถี่เกินไป >> แนบเวลาที่ต้องรอ ให้หน้า OTP ล็อกปุ่ม Resend
     final retryAfter = data['retry_after_seconds'];
     if (res.statusCode == 429 && retryAfter is int) {
       throw OtpRateLimitException(
-        data['message'] ?? 'ขอรหัส OTP บ่อยเกินไป',
+        data['message'] ?? 'ขอรหัส OTP บ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง',
         retryAfterSeconds: retryAfter,
       );
     }
     throw data['message'] ?? 'ส่ง OTP ไม่สำเร็จ';
   }
 
-  /// ── แปลง response ที่ยืนยัน OTP ไม่ผ่าน → OtpVerifyException (มีจำนวนครั้งที่กรอกไปแล้ว) ──
+  /// ── แปลง response ที่ยืนยัน OTP ไม่ผ่าน >> มีจำนวนครั้งที่กรอกไปแล้ว ──
   Never _throwOtpFailure(http.Response res, String fallback) {
     Map<String, dynamic>? data;
     try {
@@ -336,7 +335,7 @@ class AuthRemoteRepository {
           'Content-Type': 'application/json',
           'x-auth-token': token,
         },
-      );
+      ).timeout(const Duration(seconds: 8)); // กันรอนานตอนสัญญาณไม่ดี / wifi ไม่มีเน็ต
 
       if (res.statusCode != 200) {
         throw jsonDecode(res.body)['error'] ?? 'ไม่สามารถดึงข้อมูลสมาชิกที่ผ่านการอนุมัติได้';

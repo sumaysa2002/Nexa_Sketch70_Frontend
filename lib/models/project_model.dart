@@ -25,6 +25,8 @@ class ProjectModel {
   final String? userRole;     // เก็บสถานะ 'Editor' | 'Viewer'
   final int? creatorAdminId;  // เก็บ admin id ของผู้สร้างโครงการ
 
+  final String? clientUuid;   // idempotency key ที่ client สร้างตอนบันทึกครั้งแรก
+
   ProjectModel({
     required this.id,
     this.nameProjectId,
@@ -43,6 +45,7 @@ class ProjectModel {
     this.projectTimeCreated,
     this.userRole,
     this.creatorAdminId,
+    this.clientUuid,
   });
 
   // ── copyWith ──────────────────────────────────────────────
@@ -63,7 +66,8 @@ class ProjectModel {
     String? userRole,
     List<int>? memberIds,
     String? projectTimeCreated,
-    int? creatorAdminId
+    int? creatorAdminId,
+    String? clientUuid,
   }) {
     return ProjectModel(
       id:                   id ?? this.id,
@@ -83,6 +87,7 @@ class ProjectModel {
       memberIds:            memberIds ?? this.memberIds,
       projectTimeCreated:   projectTimeCreated ?? this.projectTimeCreated,
       creatorAdminId:       creatorAdminId ?? this.creatorAdminId,
+      clientUuid:           clientUuid ?? this.clientUuid,
     );
   }
 
@@ -103,13 +108,15 @@ class ProjectModel {
       projectEndDate:       json['project_end_date'] as String?,
       projectNote:          json['project_note'] as String?,
       memberIds:            (json['member_ids'] as List<dynamic>?)
-                              ?.map((e) => e as int)
-                              .toList() ?? [],
+          ?.map((e) => e as int)
+          .toList() ?? [],
       projectTimeCreated:   json['project_time_created'] as String?,
 
       userRole:             json['user_role'] as String?,
 
       creatorAdminId:       json['project_user_creator'] as int?,
+
+      clientUuid:           json['client_uuid'] as String?,
     );
   }
 
@@ -132,6 +139,7 @@ class ProjectModel {
     'project_time_created': projectTimeCreated,
     'user_role': userRole,
     'creator_admin_id':     creatorAdminId,
+    'client_uuid':          clientUuid,
   };
 
   // ── == ────────────────────────────────────────────────────

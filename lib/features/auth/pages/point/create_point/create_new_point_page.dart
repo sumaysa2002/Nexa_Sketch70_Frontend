@@ -434,7 +434,7 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
         context: context,
         barrierDismissible: false,
         builder: (_) => alert_image_one_button(
-          text: "ไม่สามารถสร้างหมุดรังวัดได้\nเนื่องจากอยู่ในโหมด offline",
+          text: "ไม่สามารถสร้างหมุดรังวัดได้\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
           assets_image: "assets/images/no_wifi.png",
           onPressed: () => Navigator.of(context).pop(),
           text_button: "ตกลง",
@@ -603,7 +603,7 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
               context: context,
               barrierDismissible: false,
               builder: (_) => alert_image_one_button(
-                text: "ไม่สามารถสร้างหมุดรังวัดได้\nเนื่องจากอยู่ในโหมด offline",
+                text: "ไม่สามารถสร้างหมุดรังวัดได้\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
                 assets_image: "assets/images/no_wifi.png",
                 onPressed: () => Navigator.of(context).pop(),
                 text_button: "ตกลง",

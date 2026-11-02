@@ -153,13 +153,8 @@ class TaskCubit extends Cubit<TaskState> {
     try {
       await taskRemoteRepository.deleteProject(token: token, projectId: projectId);
 
+      // ลบเฉพาะโครงการที่ถูกลบบน server (ห้ามลบโครงการ offline ที่ยังไม่ได้ sync)
       await taskLocalRepository.deleteProject(projectId);
-
-      // ลบโครงการ offline (is_synced = 1)
-      final unsyncedProjects = await taskLocalRepository.getUnsyncedProjects();
-      for (final p in unsyncedProjects) {
-        await taskLocalRepository.deleteProject(p.id);
-      }
 
       emit(DeleteProjectSuccess(projectId));
 
@@ -175,23 +170,16 @@ class TaskCubit extends Cubit<TaskState> {
   /* ============================================================
     ส่วนจัดการ sync Projects
   ============================================================ */
-  /// ── sync โครงการที่สร้างขณะ offline ขึ้น server ────────────
+  /// ── sync ข้อมูลที่ค้างทั้งหมดขึ้น server (ผ่าน SyncService กัน sync ซ้อนกัน) ────────────
   Future<void> syncProjects({required String token}) async {
-    final unsyncedProjects = await taskLocalRepository.getUnsyncedProjects();
-    if (unsyncedProjects.isEmpty) return;
-
-    await taskRemoteRepository.syncProjects(token: token);
-
+    await SyncService.instance.syncAll(token);
   }
 
-  /// ── sync โครงการที่แก้ไขขณะ offline ขึ้น server ────────────
+  /// ── sync แล้ว reload รายการโครงการ ────────────
   Future<void> syncUpdatedProjects({required String token}) async {
-    final hasPending = await taskLocalRepository.getUpdatedPendingProjects();
-    if (hasPending.isEmpty) return;
+    final result = await SyncService.instance.syncAll(token);
+    if (result.synced == 0) return;
 
-    await taskRemoteRepository.syncUpdatedProjects(token: token);
-
-    // sync เสร็จแล้ว → reload projects ใหม่
     final projects = await taskRemoteRepository.getProjects(token: token);
     emit(GetProjectsSuccess(projects));
   }

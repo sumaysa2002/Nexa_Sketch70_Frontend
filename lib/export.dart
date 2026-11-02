@@ -36,6 +36,7 @@ export 'package:offline_gnss69_new/core/services/app_exception.dart';
 export 'package:offline_gnss69_new/core/services/pending_point_image_service.dart';
 export 'package:offline_gnss69_new/core/services/secure_image.dart';
 export 'package:offline_gnss69_new/core/services/sp_service.dart';
+export 'package:offline_gnss69_new/core/services/sync_service.dart';
 export 'package:offline_gnss69_new/core/services/thai_address_service.dart';
 
 // features--------------------
@@ -155,9 +156,9 @@ export 'package:offline_gnss69_new/features/widgets/text/w_text_thai_notosanstha
 
 // models--------------------
 export 'package:offline_gnss69_new/models/point_model.dart';
+export 'package:offline_gnss69_new/models/project_model.dart';
 export 'package:offline_gnss69_new/models/signup_payload.dart';
 export 'package:offline_gnss69_new/models/user_model.dart';
-export 'package:offline_gnss69_new/models/project_model.dart';
 
 
 

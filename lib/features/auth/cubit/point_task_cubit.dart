@@ -137,9 +137,10 @@ class PointTaskCubit extends Cubit<PointTaskState> {
   Future<void> getPoints({
     required String token,
     required int projectId,
+    bool silent = false,
   }) async {
     try {
-      emit(PointTaskLoading());
+      if (!silent) emit(PointTaskLoading());
       final points = await pointtaskRemoteRepository.getPoints(token: token, projectId: projectId);
       emit(GetPointsSuccess(points));
     } catch (e) {
@@ -303,9 +304,10 @@ class PointTaskCubit extends Cubit<PointTaskState> {
     }
   }
 
-  Future<void> syncPendingPoints({required String token}) async {
-    await pointtaskRemoteRepository.syncUnsyncedPoints(token: token);
-    await pointtaskRemoteRepository.syncUpdatedPendingPoints(token: token);
+  /// ── sync ข้อมูลที่ค้างทั้งหมดขึ้น server ────────────
+  /// retryBlocked = true >> รวมรายการที่เคยเจอ error ถาวร (ใช้ตอนผู้ใช้กด sync เองตอนกดออกจากระบบ)
+  Future<SyncResult> syncPendingPoints({required String token, bool retryBlocked = false}) {
+    return SyncService.instance.syncAll(token, retryBlocked: retryBlocked);
   }
 
 

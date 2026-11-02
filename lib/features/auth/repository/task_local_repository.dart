@@ -17,10 +17,10 @@ class TaskLocalRepository {
     final path = join(dbPath, "gnss_projects.db");
 
     return openDatabase(
-      path,
-      version: 5,
-      onCreate: (db, version) {
-        return db.execute('''
+        path,
+        version: 6,
+        onCreate: (db, version) {
+          return db.execute('''
           CREATE TABLE $_tableName (
             id                  INTEGER PRIMARY KEY,
             name_project_id     TEXT,
@@ -40,10 +40,15 @@ class TaskLocalRepository {
             user_role           TEXT,       -- จำสถานะ 'Editor' | 'Viewer'
             is_synced            INTEGER NOT NULL DEFAULT 0, -- sync create
             is_updated_pending   INTEGER NOT NULL DEFAULT 0,  -- sync update
-            creator_admin_id     INTEGER  -- id ของ admin ที่สร้างโครงการ
+            creator_admin_id     INTEGER, -- id ของ admin ที่สร้างโครงการ
+
+            client_uuid          TEXT,                        -- idempotency key (กันโครงการซ้ำตอน sync)
+            sync_error           TEXT,                        -- ข้อความ error ล่าสุดตอน sync
+            sync_attempts        INTEGER NOT NULL DEFAULT 0,  -- จำนวนครั้งที่ sync ไม่ผ่าน
+            sync_blocked         INTEGER NOT NULL DEFAULT 0   -- 1 = error ถาวร (4xx) หยุด auto sync รอผู้ใช้
           )
         ''');
-      },
+        },
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
             await db.execute("ALTER TABLE $_tableName ADD COLUMN user_role TEXT");
@@ -62,7 +67,33 @@ class TaskLocalRepository {
                 "UPDATE $_tableName SET is_synced = 0 WHERE is_synced = 1"
             );
           }
-      }
+
+          if (oldVersion < 6) {
+            for (final sql in [
+              "ALTER TABLE $_tableName ADD COLUMN client_uuid TEXT",
+              "ALTER TABLE $_tableName ADD COLUMN sync_error TEXT",
+              "ALTER TABLE $_tableName ADD COLUMN sync_attempts INTEGER NOT NULL DEFAULT 0",
+              "ALTER TABLE $_tableName ADD COLUMN sync_blocked INTEGER NOT NULL DEFAULT 0",
+            ]) {
+              try {
+                await db.execute(sql);
+              } catch (_) {}
+            }
+            final pending = await db.query(
+              _tableName,
+              columns: ['id'],
+              where: 'is_synced = 1 AND client_uuid IS NULL',
+            );
+            for (final row in pending) {
+              await db.update(
+                _tableName,
+                {'client_uuid': generateClientUuid()},
+                where: 'id = ?',
+                whereArgs: [row['id']],
+              );
+            }
+          }
+        }
     );
   }
 
@@ -71,6 +102,7 @@ class TaskLocalRepository {
     final db = await database;
     final map = _toMap(project);
     map['is_synced'] = isSynced;
+    map.addAll(_clearSyncErrorMap);
     await db.insert(
       _tableName,
       map,
@@ -78,11 +110,23 @@ class TaskLocalRepository {
     );
   }
 
-  /// ── Insert หลายโครงการพร้อมกัน (cache จาก API) ────────────
+  /// ── แก้ไขโครงการตอน offline ─────────────
+  Future<Set<int>> _pendingUpdateIds(Database db) async {
+    final rows = await db.query(
+      _tableName,
+      columns: ['id'],
+      where: 'is_updated_pending = 1',
+    );
+    return rows.map((r) => r['id'] as int).toSet();
+  }
+
+  /// ── Insert หลายโครงการพร้อมกัน (ข้ามโครงการที่ยังมีการแก้ไข offline รอ sync) ────────────
   Future<void> insertProjects(List<ProjectModel> projects) async {
     final db = await database;
+    final pendingIds = await _pendingUpdateIds(db);
     final batch = db.batch();
     for (final project in projects) {
+      if (pendingIds.contains(project.id)) continue;
       batch.insert(
         _tableName,
         _toMap(project),
@@ -92,13 +136,15 @@ class TaskLocalRepository {
     await batch.commit(noResult: true);
   }
 
-  /// ── upsert project ทีละตัว ─────────────────────────────
+  /// ── upsert project (ข้ามโครงการที่ยังมีการแก้ไข offline รอ sync) ─────────────────────────────
   Future<void> upsertProjects(List<ProjectModel> projects) async {
     final db = await database;
+    final pendingIds = await _pendingUpdateIds(db);
 
     final batch = db.batch();
 
     for (final project in projects) {
+      if (pendingIds.contains(project.id)) continue;
       batch.insert(
         _tableName,
         _toMap(project),
@@ -126,11 +172,13 @@ class TaskLocalRepository {
   }
 
   /// ── อัปเดทข้อมูลโครงการใน SQLite ────────────────────────
-  Future<void> updateProject(ProjectModel project) async {
+  Future<void> updateProject(ProjectModel project, {bool resetSyncError = false}) async {
     final db = await database;
+    final map = _toMap(project);
+    if (resetSyncError) map.addAll(_clearSyncErrorMap);
     await db.update(
       _tableName,
-      _toMap(project),
+      map,
       where: 'id = ?',
       whereArgs: [project.id],
     );
@@ -146,6 +194,15 @@ class TaskLocalRepository {
     );
   }
 
+  /// ── จำนวนโครงการที่ยังไม่ได้ส่งขึ้น server (สร้างหรือแก้ไขตอน offline) ──
+  Future<int> countPending() async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM $_tableName WHERE is_synced = 1 OR is_updated_pending = 1',
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
   /// ── ล้างข้อมูลโครงการทั้งหมด ─────────────────────────────────────
   Future<void> clearAll() async {
     final db = await database;
@@ -156,19 +213,79 @@ class TaskLocalRepository {
   /* ============================================================
     ส่วนจัดการ sync Projects (create)
   ============================================================ */
-  /// ── ดึงโครงการที่ยังไม่ได้ sync create ──────────────────────────
-  Future<List<ProjectModel>> getUnsyncedProjects() async {
+  /// ── ดึงโครงการที่ยังไม่ได้ sync >> ข้ามโครงการที่เคยเจอ error ถาวร (รอผู้ใช้กด sync เองหรือแก้ข้อมูล) ──────────────────────────
+  Future<List<ProjectModel>> getUnsyncedProjects({bool includeBlocked = false}) async {
     final db = await database;
     final result = await db.query(
       _tableName,
-      where: 'is_synced = ?',
-      whereArgs: [1],
+      where: includeBlocked ? 'is_synced = 1' : 'is_synced = 1 AND sync_blocked = 0',
     );
 
     return result.map((e) => _fromMap(e)).toList();
   }
 
-  /// ── is_synced = 0 หลัง sync สำเร็จ ─────────────────────────────────────
+  /// ── sync create สำเร็จ >> แทน id ติดลบ ด้วยข้อมูลจริงจาก server ──
+  Future<void> replaceTempWithSynced(int tempId, ProjectModel synced) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final map = _toMap(synced)
+        ..['is_synced'] = 0
+        ..['is_updated_pending'] = 0
+        ..addAll(_clearSyncErrorMap);
+      await txn.insert(_tableName, map, conflictAlgorithm: ConflictAlgorithm.replace);
+      if (tempId != synced.id) {
+        await txn.delete(_tableName, where: 'id = ?', whereArgs: [tempId]);
+      }
+    });
+  }
+
+  /// ── เติม client_uuid ให้แถวที่ยังไม่มี ──────────
+  Future<ProjectModel> ensureClientUuid(ProjectModel p) async {
+    if (p.clientUuid != null) return p;
+    final uuid = generateClientUuid();
+    final db = await database;
+    await db.update(
+      _tableName,
+      {'client_uuid': uuid},
+      where: 'id = ?',
+      whereArgs: [p.id],
+    );
+    return p.copyWith(clientUuid: uuid);
+  }
+
+
+  /* ============================================================
+    ส่วนจัดการสถานะ error ตอน sync
+  ============================================================ */
+  static const Map<String, Object?> _clearSyncErrorMap = {
+    'sync_error':    null,
+    'sync_attempts': 0,
+    'sync_blocked':  0,
+  };
+
+  /// ── บันทึก error ตอน sync (blocked = true >> error ถาวร หยุด auto sync) ──
+  Future<void> markSyncError(int projectId, String message, {required bool blocked}) async {
+    final db = await database;
+    await db.rawUpdate(
+      'UPDATE $_tableName '
+          'SET sync_error = ?, sync_attempts = sync_attempts + 1, sync_blocked = ? '
+          'WHERE id = ?',
+      [message, blocked ? 1 : 0, projectId],
+    );
+  }
+
+  /// ── รายการโครงการที่ sync ไม่ผ่าน ─────────────────
+  Future<List<Map<String, Object?>>> getSyncErrors() async {
+    final db = await database;
+    return db.query(
+      _tableName,
+      columns: ['id', 'project_name', 'sync_error', 'sync_attempts', 'sync_blocked'],
+      where: '(is_synced = 1 OR is_updated_pending = 1) AND sync_error IS NOT NULL',
+      orderBy: 'sync_blocked DESC, project_name ASC',
+    );
+  }
+
+  /// ── is_synced = 0 (หลัง sync สำเร็จ) ─────────────────────────────────────
   Future<void> updateRowValue(int projectId) async {
     final db = await database;
     await db.update(
@@ -184,21 +301,23 @@ class TaskLocalRepository {
     ส่วนจัดการ sync Projects (update)
   ============================================================ */
   /// ── ดึงโครงการที่ยังไม่ได้  sync update ──────────────────────────
-  Future<List<ProjectModel>> getUpdatedPendingProjects() async {
+  Future<List<ProjectModel>> getUpdatedPendingProjects({bool includeBlocked = false}) async {
     final db = await database;
     final result = await db.query(
       _tableName,
-      where: 'is_updated_pending = ?',
-      whereArgs: [1],
+      where: includeBlocked
+          ? 'is_updated_pending = 1'
+          : 'is_updated_pending = 1 AND sync_blocked = 0',
     );
     return result.map((e) => _fromMap(e)).toList();
   }
 
-  /// ── is_updated_pending = 1 รอ sync ─────────────────────────────────────
+  /// ── is_updated_pending = 1 (รอ sync) ─────────────────────────────────────
   Future<void> updateProjectPending(ProjectModel project) async {
     final db = await database;
     final map = _toMap(project);
     map['is_updated_pending'] = 1;
+    map.addAll(_clearSyncErrorMap); // ผู้ใช้แก้ใหม่ >> ให้ลอง sync ใหม่
     await db.update(
       _tableName,
       map,
@@ -207,12 +326,12 @@ class TaskLocalRepository {
     );
   }
 
-  /// ── is_updated_pending = 0 หลัง sync สำเร็จ ─────────────────────────────────────
+  /// ── is_updated_pending = 0 (หลัง sync สำเร็จ) ─────────────────────────────────────
   Future<void> markUpdateSynced(int projectId) async {
     final db = await database;
     await db.update(
       _tableName,
-      {'is_updated_pending': 0},
+      {'is_updated_pending': 0, ..._clearSyncErrorMap},
       where: 'id = ?',
       whereArgs: [projectId],
     );
@@ -223,7 +342,7 @@ class TaskLocalRepository {
   /* ============================================================
     Map Projects
   ============================================================ */
-  /// ── แปลง ProjectModel >> เป็น Map สำหรับ SQLite ────────────────
+  /// ── แปลง ProjectModel >>  Map ────────────────
   Map<String, dynamic> _toMap(ProjectModel project) {
     return {
       'id':                   project.id,
@@ -242,8 +361,9 @@ class TaskLocalRepository {
       'member_ids':           jsonEncode(project.memberIds),
       'project_time_created': project.projectTimeCreated,
       'user_role':            project.userRole,
-      'is_synced':            0,
       'creator_admin_id':     project.creatorAdminId,
+
+      'client_uuid':          project.clientUuid,
     };
   }
 
@@ -269,6 +389,8 @@ class TaskLocalRepository {
       projectTimeCreated:   map['project_time_created'] as String?,
       userRole:             map['user_role'] as String?,
       creatorAdminId:       map['creator_admin_id'] as int?,
+
+      clientUuid:           map['client_uuid'] as String?,
     );
   }
 
@@ -300,6 +422,8 @@ class TaskLocalRepository {
       print("is_synced:           ${row['is_synced']}");
       print("is_updated_pending:  ${row['is_updated_pending']}");
       print("creator_admin_id:    ${row['creator_admin_id']}");
+      print("client_uuid:         ${row['client_uuid']}");
+      print("sync_error:          ${row['sync_error']} (attempts ${row['sync_attempts']}, blocked ${row['sync_blocked']})");
       print("---------------------------------------------------");
     }
     print("=======================================================");

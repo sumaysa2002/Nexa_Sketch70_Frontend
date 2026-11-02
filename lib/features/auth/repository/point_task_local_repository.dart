@@ -18,7 +18,7 @@ class PointTaskLocalRepository {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -71,7 +71,12 @@ class PointTaskLocalRepository {
             point_note            TEXT,
             
             is_synced             INTEGER NOT NULL DEFAULT 0,  -- sync create
-            is_updated_pending    INTEGER NOT NULL DEFAULT 0   -- sync update
+            is_updated_pending    INTEGER NOT NULL DEFAULT 0,  -- sync update
+
+            client_uuid           TEXT,                        -- idempotency key (กันหมุดซ้ำตอน sync)
+            sync_error            TEXT,                        -- ข้อความ error ล่าสุดตอน sync
+            sync_attempts         INTEGER NOT NULL DEFAULT 0,  -- จำนวนครั้งที่ sync ไม่ผ่าน
+            sync_blocked          INTEGER NOT NULL DEFAULT 0   -- 1 = error ถาวร (4xx) หยุด auto sync รอผู้ใช้
           )
         ''');
       },
@@ -104,25 +109,43 @@ class PointTaskLocalRepository {
           } catch (_) {}
         }
 
+        if (oldVersion < 5) {
+          for (final sql in [
+            "ALTER TABLE $_tableName ADD COLUMN client_uuid TEXT",
+            "ALTER TABLE $_tableName ADD COLUMN sync_error TEXT",
+            "ALTER TABLE $_tableName ADD COLUMN sync_attempts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE $_tableName ADD COLUMN sync_blocked INTEGER NOT NULL DEFAULT 0",
+          ]) {
+            try {
+              await db.execute(sql);
+            } catch (_) {}
+          }
+          final pending = await db.query(
+            _tableName,
+            columns: ['id'],
+            where: 'is_synced = 1 AND client_uuid IS NULL',
+          );
+          for (final row in pending) {
+            await db.update(
+              _tableName,
+              {'client_uuid': generateClientUuid()},
+              where: 'id = ?',
+              whereArgs: [row['id']],
+            );
+          }
+        }
+
       },
     );
   }
-
-  /// ── Insert point เดียว ───────────────────────────────────────────
-  // Future<void> insertPoint(PointModel point) async {
-  //   final db = await database;
-  //   await db.insert(
-  //     _tableName,
-  //     _toMap(point),
-  //     conflictAlgorithm: ConflictAlgorithm.replace,
-  //   );
-  // }
 
   /// ── Insert point เดียว พร้อมกำหนด is_synced ──────
   Future<void> insertPoint(PointModel point, {int isSynced = 0}) async {
     final db = await database;
     final map = _toMap(point);
     map['is_synced'] = isSynced;
+    // บันทึกใหม่ = ผู้ใช้อาจแก้ข้อมูลที่เคย sync ไม่ผ่านแล้ว >> ล้างสถานะ error ให้ลองใหม่
+    map.addAll(_clearSyncErrorMap);
     await db.insert(
       _tableName,
       map,
@@ -130,11 +153,19 @@ class PointTaskLocalRepository {
     );
   }
 
-  /// ── Insert หลาย point พร้อมกัน (cache จาก API) ──────────────────
-  Future<void> insertPoints(List<PointModel> points) async {
+  /// ── Insert หลาย point พร้อมกัน (ข้าม point ที่ยังมีการแก้ไข offline รอ sync) ──────────────────
+  Future<List<int>> insertPoints(List<PointModel> points) async {
     final db    = await database;
+    final pendingRows = await db.query(
+      _tableName,
+      columns: ['id'],
+      where: 'is_updated_pending = 1',
+    );
+    final pendingIds = pendingRows.map((r) => r['id'] as int).toSet();
+
     final batch = db.batch();
     for (final point in points) {
+      if (pendingIds.contains(point.id)) continue;
       batch.insert(
         _tableName,
         _toMap(point),
@@ -142,6 +173,28 @@ class PointTaskLocalRepository {
       );
     }
     await batch.commit(noResult: true);
+
+    // หมุด offline ที่ถูกสร้างบน server แล้ว (response หายระหว่างทาง)
+    final serverUuids = points
+        .map((p) => p.clientUuid)
+        .whereType<String>()
+        .toSet();
+    if (serverUuids.isEmpty) return const [];
+
+    final tempRows = await db.query(
+      _tableName,
+      columns: ['id', 'client_uuid'],
+      where: 'id < 0 AND client_uuid IS NOT NULL',
+    );
+    final removed = <int>[];
+    for (final row in tempRows) {
+      if (serverUuids.contains(row['client_uuid'])) {
+        final id = row['id'] as int;
+        await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
+        removed.add(id);
+      }
+    }
+    return removed;
   }
 
   /// ── ดึง point ทั้งหมดของโครงการจาก SQLite ──────────────────────
@@ -168,7 +221,6 @@ class PointTaskLocalRepository {
     return result.isNotEmpty ? _fromMap(result.first) : null;
   }
 
-
   /// ── อัปเดต point ใน SQLite ──────────────────────────────────────
   Future<void> updatePoint(PointModel point) async {
     final db = await database;
@@ -190,29 +242,104 @@ class PointTaskLocalRepository {
     );
   }
 
-  /// ── ล้าง point ทั้งหมดของโครงการ ───────────────────────────────
+  /// ── ล้าง point ของโครงการที่ sync แล้ว (ไม่ลบ point ที่ยังรอ sync) ──
   Future<void> clearPointsByProject(int projectId) async {
     final db = await database;
     await db.delete(
       _tableName,
-      where:     'project_id = ?',
+      where:     'project_id = ? AND is_synced = 0 AND is_updated_pending = 0',
       whereArgs: [projectId],
     );
+  }
+
+  /// ── จำนวน point ที่ยังไม่ได้ส่งขึ้น server ──
+  Future<int> countPending() async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM $_tableName WHERE is_synced = 1 OR is_updated_pending = 1',
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  /// ── ล้าง point ทั้งหมด (ใช้ตอน logout) ─────────────────────────
+  Future<void> clearAll() async {
+    final db = await database;
+    await db.delete(_tableName);
   }
 
 
   /* ============================================================
     ส่วนจัดการ sync Point (create)
   ============================================================ */
-  /// ── ดึง Point ที่ยังไม่ได้ sync create ──────────────────────────
-  Future<List<PointModel>> getUnsyncedPoints() async {
+  /// ── ดึง Point ที่ยังไม่ได้ sync >> ข้ามหมุดที่เคยเจอ error ถาวร (รอผู้ใช้กด sync เองหรือแก้ข้อมูล) ──────────────────────────
+  Future<List<PointModel>> getUnsyncedPoints({bool includeBlocked = false}) async {
     final db = await database;
     final result = await db.query(
       _tableName,
-      where: 'is_synced = ?',
-      whereArgs: [1],
+      where: includeBlocked ? 'is_synced = 1' : 'is_synced = 1 AND sync_blocked = 0',
     );
     return result.map((e) => _fromMap(e)).toList();
+  }
+
+  /// ── sync create สำเร็จ >> แทน id ติดลบ ด้วยข้อมูลจริงจาก server ──────────────────────────
+  Future<void> replaceTempWithSynced(int tempId, PointModel synced) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final map = _toMap(synced)
+        ..['is_synced'] = 0
+        ..['is_updated_pending'] = 0
+        ..addAll(_clearSyncErrorMap);
+      await txn.insert(_tableName, map, conflictAlgorithm: ConflictAlgorithm.replace);
+      if (tempId != synced.id) {
+        await txn.delete(_tableName, where: 'id = ?', whereArgs: [tempId]);
+      }
+    });
+  }
+
+  /// ── เติม client_uuid ให้แถวที่ยังไม่มี ──────────
+  Future<String> ensureClientUuid(PointModel p) async {
+    if (p.clientUuid != null) return p.clientUuid!;
+    final uuid = generateClientUuid();
+    final db = await database;
+    await db.update(
+      _tableName,
+      {'client_uuid': uuid},
+      where: 'id = ?',
+      whereArgs: [p.id],
+    );
+    return uuid;
+  }
+
+
+  /* ============================================================
+    ส่วนจัดการสถานะ error ตอน sync
+  ============================================================ */
+  static const Map<String, Object?> _clearSyncErrorMap = {
+    'sync_error':    null,
+    'sync_attempts': 0,
+    'sync_blocked':  0,
+  };
+
+  /// ── บันทึก error ตอน sync (blocked = true >> error ถาวร >> หยุด auto sync) ──
+  Future<void> markSyncError(int pointId, String message, {required bool blocked}) async {
+    final db = await database;
+    await db.rawUpdate(
+      'UPDATE $_tableName '
+          'SET sync_error = ?, sync_attempts = sync_attempts + 1, sync_blocked = ? '
+          'WHERE id = ?',
+      [message, blocked ? 1 : 0, pointId],
+    );
+  }
+
+  /// ── รายการหมุดที่ sync ไม่ผ่าน ─────────────────
+  Future<List<Map<String, Object?>>> getSyncErrors() async {
+    final db = await database;
+    return db.query(
+      _tableName,
+      columns: ['id', 'project_id', 'point_name', 'sync_error', 'sync_attempts', 'sync_blocked'],
+      where: '(is_synced = 1 OR is_updated_pending = 1) AND sync_error IS NOT NULL',
+      orderBy: 'sync_blocked DESC, point_name ASC',
+    );
   }
 
 
@@ -220,21 +347,23 @@ class PointTaskLocalRepository {
     ส่วนจัดการ sync Point (update)
   ============================================================ */
   /// ── ดึง Point ที่ยังไม่ได้  sync update ──────────────────────────
-  Future<List<PointModel>> getUpdatedPendingPoints() async {
+  Future<List<PointModel>> getUpdatedPendingPoints({bool includeBlocked = false}) async {
     final db = await database;
     final result = await db.query(
       _tableName,
-      where: 'is_updated_pending = ?',
-      whereArgs: [1],
+      where: includeBlocked
+          ? 'is_updated_pending = 1'
+          : 'is_updated_pending = 1 AND sync_blocked = 0',
     );
     return result.map((e) => _fromMap(e)).toList();
   }
 
-  /// ── is_updated_pending = 1 รอ sync ─────────────────────────────────────
+  /// ── is_updated_pending = 1 (รอ sync) ─────────────────────────────────────
   Future<void> updatePointPending(PointModel point) async {
     final db = await database;
     final map = _toMap(point);
     map['is_updated_pending'] = 1;
+    map.addAll(_clearSyncErrorMap);
     await db.update(
       _tableName,
       map,
@@ -243,12 +372,12 @@ class PointTaskLocalRepository {
     );
   }
 
-  /// ── is_updated_pending = 0 หลัง sync สำเร็จ ───────────────────────────────
+  /// ── is_updated_pending = 0 (หลัง sync สำเร็จ) ───────────────────────────────
   Future<void> markUpdateSynced(int pointId) async {
     final db = await database;
     await db.update(
       _tableName,
-      {'is_updated_pending': 0},
+      {'is_updated_pending': 0, ..._clearSyncErrorMap},
       where: 'id = ?',
       whereArgs: [pointId],
     );
@@ -310,7 +439,7 @@ class PointTaskLocalRepository {
       'survey_qc':            p.surveyQc,
       'point_note':           p.pointNote,
 
-      'is_synced':            0,
+      'client_uuid':          p.clientUuid,
     };
   }
 
@@ -365,7 +494,20 @@ class PointTaskLocalRepository {
       surveyQc:             map['survey_qc'] as int?,
 
       pointNote:            map['point_note'] as String?,
+      clientUuid:           map['client_uuid'] as String?,
+
+      syncStatus:           _syncStatusFrom(map),
+      syncError:            map['sync_error'] as String?,
     );
+  }
+
+  /// ── แปลงคอลัมน์สถานะใน SQLite เป็น PointSyncStatus ──────────────
+  PointSyncStatus _syncStatusFrom(Map<String, dynamic> map) {
+    final pendingCreate = (map['is_synced'] as int? ?? 0) == 1;
+    final pendingUpdate = (map['is_updated_pending'] as int? ?? 0) == 1;
+    if (!pendingCreate && !pendingUpdate) return PointSyncStatus.synced;
+    if ((map['sync_blocked'] as int? ?? 0) == 1) return PointSyncStatus.failed;
+    return pendingCreate ? PointSyncStatus.pendingCreate : PointSyncStatus.pendingUpdate;
   }
 
 
@@ -425,6 +567,8 @@ class PointTaskLocalRepository {
       print("point_note:            ${row['point_note']}");
       print("is_synced:             ${row['is_synced']}");
       print("is_updated_pending:    ${row['is_updated_pending']}");
+      print("client_uuid:           ${row['client_uuid']}");
+      print("sync_error:            ${row['sync_error']} (attempts ${row['sync_attempts']}, blocked ${row['sync_blocked']})");
       print("---------------------------------------------------");
     }
 
@@ -433,4 +577,3 @@ class PointTaskLocalRepository {
 
 
 }
-

@@ -74,6 +74,15 @@ class PendingPointImageService {
     }
   }
 
+  // ── ลบรูป pending ทั้งหมดในเครื่อง (ใช้ตอน logout) ──────────────
+  Future<void> deleteAll() async {
+    final baseDir = await getApplicationDocumentsDirectory();
+    final dir = Directory('${baseDir.path}/pending_points');
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+  }
+
   // ── ย้ายโฟลเดอร์ตอน point ได้ id จริงจาก server (ปกติไม่ต้องใช้เพราะ sync แล้วลบทิ้งเลย) ──
   Future<void> renamePointFolder({
     required int oldId,

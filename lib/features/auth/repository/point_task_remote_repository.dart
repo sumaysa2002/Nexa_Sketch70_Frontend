@@ -1,8 +1,54 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:http/http.dart' as http;
 
 import 'package:offline_gnss69_new/export.dart';
 
+/// ติดต่อ server ไม่ได้ >> บันทึกในเครื่องแล้ว sync ทีหลัง
+class _SaveOfflineException implements Exception {
+  const _SaveOfflineException();
+}
+
 class PointTaskRemoteRepository {
+
+  /* ============================================================
+    Server Error / Time Out
+  ============================================================ */
+  /// timeout สำหรับ request ที่มีรูป
+  static const _uploadTimeout = Duration(seconds: 90);
+
+  /// ── error จาก server ─────────────
+  static bool _isOfflineError(Object e) =>
+      e is SocketException ||
+          e is TimeoutException ||
+          e is HandshakeException ||
+          e is http.ClientException ||
+          e is _SaveOfflineException;
+
+  /// ── ดึงข้อความ error จาก response ──
+  static String _errorFrom(http.Response res, String fallback) {
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map && body['error'] is String) return body['error'] as String;
+    } catch (_) {}
+    return fallback;
+  }
+
+  /// ── ส่ง multipart request พร้อม timeout (502/503/504 >> ถือว่า server ไม่พร้อม (offline)) ──
+  static Future<http.Response> _sendWithTimeout(http.MultipartRequest request) async {
+    final res = await request
+        .send()
+        .then(http.Response.fromStream)
+        .timeout(_uploadTimeout);
+
+    if (res.statusCode == 502 || res.statusCode == 503 || res.statusCode == 504) {
+      throw const _SaveOfflineException();
+    }
+    return res;
+  }
+
+
 
   final _local = PointTaskLocalRepository();
   final _pendingImages = PendingPointImageService();
@@ -121,13 +167,20 @@ class PointTaskRemoteRepository {
     String? pointNote
 
   }) async {
+    // ถ้า server สร้างไปแล้วแต่ response หาย >> sync รอบหลัง server จะคืนหมุดเดิม ไม่สร้างซ้ำ
+    final clientUuid = generateClientUuid();
+
     try {
+      // โครงการยังเป็น offline (id ติดลบ) ยังไม่มีบน server >> บันทึกในเครื่องเลย
+      if (projectId < 0) throw const _SaveOfflineException();
+
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('${Constants.backendUri}/points/create_point'),
       );
 
       request.headers['x-auth-token'] = token;
+      request.fields['client_uuid'] = clientUuid;
       request.fields['project_id'] = projectId.toString();
       request.fields['point_name'] = pointName;
 
@@ -194,21 +247,30 @@ class PointTaskRemoteRepository {
       addImage('e_survey_img', eSurveyImg);
       addImage('w_survey_img', wSurveyImg);
 
-      final streamed = await request.send();
-      final res = await http.Response.fromStream(streamed);
+      // offline >> timeout + gateway 502/503/504
+      final res = await _sendWithTimeout(request);
 
+      // ไม่บันทึก offline >> error อื่นจาก server (400 / 401 / 403 / 413 / 500)
       if (res.statusCode != 201) {
-        throw jsonDecode(res.body)['error'] ?? 'สร้าง Point ไม่สำเร็จ';
+        throw ServerException(res.statusCode, _errorFrom(res, 'สร้างหมุดรังวัดไม่สำเร็จ'));
       }
 
       final point = PointModel.fromJson(jsonDecode(res.body));
 
       // cache ลง SQLite
-      await _local.insertPoint(point);
+      try {
+        await _local.insertPoint(point);
+      } catch (e) {
+        if (kDebugMode) debugPrint('createPoint cache error: $e');
+      }
 
       return point;
     } catch (e) {
-      // ถ้า API fail >> บันทึกลง SQLite >> sync ทีหลัง
+
+      // ไม่ใช่ปัญหาการเชื่อมต่อ >> ส่ง error ต่อให้หน้าจอแสดง
+      if (!_isOfflineError(e)) rethrow;
+
+      // ติดต่อ server ไม่ได้ >> บันทึกลง SQLite >> sync ทีหลัง
       try {
         final tempId = -DateTime
             .now()
@@ -284,6 +346,9 @@ class PointTaskRemoteRepository {
           surveyTechnician: surveyTechnician,
           surveyQc: surveyQc,
           pointNote: pointNote,
+
+          clientUuid: clientUuid,
+          syncStatus: PointSyncStatus.pendingCreate,
         );
 
         await _local.insertPoint(offlinePoint, isSynced: 1);
@@ -301,9 +366,8 @@ class PointTaskRemoteRepository {
     required int projectId,
   }) async {
     try {
-      // sync point ที่ค้างก่อน
-      await syncUnsyncedPoints(token: token);
-      await syncUpdatedPendingPoints(token: token);
+      // sync ข้อมูลที่ค้างก่อน
+      await SyncService.instance.syncAll(token);
 
       final res = await http.get(
         Uri.parse('${Constants.backendUri}/points/points/$projectId'),
@@ -321,9 +385,12 @@ class PointTaskRemoteRepository {
       final points = data.map((e) => PointModel.fromJson(e)).toList();
 
       await _local.clearPointsByProject(projectId);
-      await _local.insertPoints(points);
+      final removedTempIds = await _local.insertPoints(points);
+      for (final id in removedTempIds) {
+        await _pendingImages.deletePointFolder(id);
+      }
 
-      return points;
+      return await _local.getPoints(projectId: projectId);
     } catch (e) {
       final localPoints = await _local.getPoints(projectId: projectId);
       return localPoints;
@@ -384,6 +451,9 @@ class PointTaskRemoteRepository {
     List<String> removeImageFields = const [],
   }) async {
     try {
+      // หมุดที่สร้างตอน offline ยังไม่มีบน server >> แก้ในเครื่องเลย
+      if (pointId < 0) throw const _SaveOfflineException();
+
       final point = await _updatePointRaw(
         token: token,
         pointId: pointId,
@@ -437,9 +507,19 @@ class PointTaskRemoteRepository {
         removeImageFields: removeImageFields,
       );
 
-      await _local.updatePoint(point);
+      // cache ลง SQLite
+      try {
+        await _local.updatePoint(point);
+      } catch (e) {
+        if (kDebugMode) debugPrint('updatePoint cache error: $e');
+      }
       return point;
     } catch (e) {
+
+      // ไม่บันทึก offline >> error อื่นจาก server (400 / 401 / 403 / 413 / 500)
+      if (!_isOfflineError(e)) rethrow;
+
+      // ติดต่อ server ไม่ได้ >> บันทึกในเครื่องแล้ว sync ทีหลัง
       try {
         final existing = await _local.getPointById(pointId);
         if (existing == null) throw 'ไม่พบข้อมูลหมุดรังวัดสำหรับแก้ไขขณะ offline';
@@ -510,6 +590,10 @@ class PointTaskRemoteRepository {
           pointNote: pointNote,
 
           removedFields: removeImageFields,
+
+          syncStatus: pointId < 0
+              ? PointSyncStatus.pendingCreate
+              : PointSyncStatus.pendingUpdate,
         );
 
         if (pointId < 0) {
@@ -554,20 +638,27 @@ class PointTaskRemoteRepository {
     ส่วนจัดการ sync Point
   ============================================================ */
   /// ── sync point ที่สร้างขณะ offline ขึ้น server ────────────
-  Future<void> syncUnsyncedPoints({required String token}) async {
-    final pending = await _local.getUnsyncedPoints();
-    if (pending.isEmpty) return;
+  Future<SyncResult> syncUnsyncedPoints({
+    required String token,
+    bool includeBlocked = false,
+  }) async {
+    final result = SyncResult();
+    final pending = await _local.getUnsyncedPoints(includeBlocked: includeBlocked);
 
     for (final p in pending) {
+
       // ข้าม point ที่ project ยังไม่ sync
       if (p.projectId < 0) continue;
 
       try {
+        final clientUuid = await _local.ensureClientUuid(p);
+
         // อ่านทุก field รูป
         final images = await _readAllImageBytes(p);
 
         final synced = await _createPointRaw(
           token: token,
+          clientUuid: clientUuid,
           projectId: p.projectId,
           pointName: p.pointName,
           northing: p.northing,
@@ -617,23 +708,31 @@ class PointTaskRemoteRepository {
           pointNote: p.pointNote,
         );
 
-        // sync สำเร็จ >> ลบ temp row + temp files >> insert ข้อมูลจริง
-        await _local.deletePoint(p.id);
+        // sync สำเร็จ >> แทนแถว temp ด้วยข้อมูลจริง >> ลบรูป temp
+        await _local.replaceTempWithSynced(p.id, synced);
         await _pendingImages.deletePointFolder(p.id);
-        await _local.insertPoint(synced);
+        result.synced++;
 
-      } catch (_) {
-        continue;
+      } catch (e) {
+        if (_isOfflineError(e)) {
+          result.offline = true;
+          break;
+        }
+        await _recordSyncError(p.id, e, 'สร้างหมุดรังวัดไม่สำเร็จ');
+        result.failed++;
       }
     }
+    return result;
   }
 
 
   /// ── sync point ที่แก้ไขขณะ offline ขึ้น server ─────────
-  Future<void> syncUpdatedPendingPoints({required String token}) async {
-    final pending = await _local
-        .getUpdatedPendingPoints();
-    if (pending.isEmpty) return;
+  Future<SyncResult> syncUpdatedPendingPoints({
+    required String token,
+    bool includeBlocked = false,
+  }) async {
+    final result = SyncResult();
+    final pending = await _local.getUpdatedPendingPoints(includeBlocked: includeBlocked);
 
     for (final p in pending) {
       try {
@@ -641,7 +740,7 @@ class PointTaskRemoteRepository {
         // ใช้ชื่อเดิมจาก sever
         final images = await _readAllImageBytes(p, onlyLocal: true);
 
-        // เช็คว่า field ไหนเป็น null ใน SQLite ตอนนี้
+        // เช็คว่า field ไหนเป็น null ใน SQLite
         final removeFields = <String>[];
         if (p.pointZoominImg == null) removeFields.add('point_zoomin_img');
         if (p.pointZoomoutImg == null) removeFields.add('point_zoomout_img');
@@ -701,16 +800,38 @@ class PointTaskRemoteRepository {
           surveyTechnician: p.surveyTechnician,
           surveyQc: p.surveyQc,
           pointNote: p.pointNote,
+
+          removeImageFields: removeFields,
         );
 
         await _local.updatePoint(synced);
         await _local.markUpdateSynced(p.id);
-        await _pendingImages.deletePointFolder(
-            p.id);
+        await _pendingImages.deletePointFolder(p.id);
+        result.synced++;
 
-      } catch (_) {
-        continue;
+      } catch (e) {
+        if (_isOfflineError(e)) {
+          result.offline = true;
+          break;
+        }
+        await _recordSyncError(p.id, e, 'อัปเดตหมุดรังวัดไม่สำเร็จ');
+        result.failed++;
       }
+    }
+    return result;
+  }
+
+
+  /// ── บันทึก error ตอน sync (ยกเว้น 401/408/429) ─────────────────────────────────────
+  Future<void> _recordSyncError(int pointId, Object e, String fallback) async {
+    final permanent = e is ServerException && e.isPermanent;
+    final message = (e is ServerException && e.statusCode == 404)
+        ? 'ไม่พบหมุดรังวัดนี้ในระบบ'
+        : safeErrorMessage(e, fallback: fallback);
+    try {
+      await _local.markSyncError(pointId, message, blocked: permanent);
+    } catch (err) {
+      if (kDebugMode) debugPrint('markSyncError error: $err');
     }
   }
 
@@ -721,6 +842,7 @@ class PointTaskRemoteRepository {
   /// ── HTTP call (ใช้ทั้งจาก createPoint และ syncUnsyncedPoints) ──
   Future<PointModel> _createPointRaw({
     required String token,
+    required String clientUuid,
     required int projectId,
     required String pointName,
 
@@ -792,6 +914,7 @@ class PointTaskRemoteRepository {
     );
 
     request.headers['x-auth-token'] = token;
+    request.fields['client_uuid'] = clientUuid;
     request.fields['project_id'] = projectId.toString();
     request.fields['point_name'] = pointName;
 
@@ -858,11 +981,10 @@ class PointTaskRemoteRepository {
     addImage('e_survey_img', eSurveyImg);
     addImage('w_survey_img', wSurveyImg);
 
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
+    final res = await _sendWithTimeout(request);
 
     if (res.statusCode != 201) {
-      throw jsonDecode(res.body)['error'] ?? 'สร้างหมุดรังวัดไม่สำเร็จ';
+      throw ServerException(res.statusCode, _errorFrom(res, 'สร้างหมุดรังวัดไม่สำเร็จ'));
     }
     return PointModel.fromJson(jsonDecode(res.body));
   }
@@ -1000,11 +1122,10 @@ class PointTaskRemoteRepository {
     addImage('e_survey_img', eSurveyImg);
     addImage('w_survey_img', wSurveyImg);
 
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
+    final res = await _sendWithTimeout(request);
 
     if (res.statusCode != 200) {
-      throw jsonDecode(res.body)['error'] ?? 'อัปเดตหมุดรังวัดไม่สำเร็จ';
+      throw ServerException(res.statusCode, _errorFrom(res, 'อัปเดตหมุดรังวัดไม่สำเร็จ'));
     }
 
     return PointModel.fromJson(jsonDecode(res.body));

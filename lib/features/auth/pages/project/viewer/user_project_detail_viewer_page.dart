@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:offline_gnss69_new/export.dart';
 
 class User_Project_Detail_Viewer_Page extends StatefulWidget {
@@ -34,8 +36,12 @@ class _User_Project_Detail_Viewer_PageState extends State<User_Project_Detail_Vi
   bool _membersLoaded = false;
 
 
+  // sync เสร็จ >> โหลดรายการหมุดใหม่
+  StreamSubscription<SyncResult>? _syncedSub;
+
   @override
   void dispose() {
+    _syncedSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -57,16 +63,21 @@ class _User_Project_Detail_Viewer_PageState extends State<User_Project_Detail_Vi
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPoints());
+
+    _syncedSub = SyncService.instance.onSynced.listen((_) {
+      if (mounted) _loadPoints(silent: true);
+    });
   }
 
 
   /// ── โหลด Points ───────────────────────────────────────────
-  void _loadPoints() {
+  void _loadPoints({bool silent = false}) {
     final authState = context.read<AuthCubit>().state;
     if (authState is! AuthLoggedIn) return;
     context.read<PointTaskCubit>().getPoints(
       token: authState.userModel.token,
       projectId: _project.id,
+      silent: silent,
     );
   }
 

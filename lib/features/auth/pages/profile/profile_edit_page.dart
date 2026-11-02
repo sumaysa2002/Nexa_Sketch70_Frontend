@@ -174,49 +174,6 @@ class _Profile_Edit_PageState extends State<Profile_Edit_Page> {
   }
 
 
-  /// ── เลือกรูปลายเซ็น และ CROP ────────────────────────────────
-  // Future<void> _pickAndCropSignature() async {
-  //
-  //   // เลือกรูปจาก Gallery
-  //   final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-  //
-  //   if (pickedFile != null) {
-  //
-  //     // Crop ภาพ
-  //     CroppedFile? croppedFile = await ImageCropper().cropImage(
-  //       sourcePath: pickedFile.path,
-  //       aspectRatio: const CropAspectRatio(ratioX: 2, ratioY: 1),
-  //       compressQuality: 90,
-  //       maxWidth: 1000,
-  //       maxHeight: 500,
-  //       uiSettings: [
-  //         AndroidUiSettings(
-  //           toolbarTitle: 'Signature',
-  //           toolbarColor: const Color(0xFF18181C),
-  //           toolbarWidgetColor: Colors.white,
-  //           initAspectRatio: CropAspectRatioPreset.original,
-  //           lockAspectRatio: true,
-  //         ),
-  //         IOSUiSettings(
-  //           title: 'Signature',
-  //           aspectRatioLockEnabled: true,
-  //         ),
-  //       ],
-  //     );
-  //
-  //     if (croppedFile != null) {
-  //
-  //       // ตัดไฟล์เป็น Bytes เพื่อนำไปแสดงผลและส่ง Payload
-  //       final bytes = await croppedFile.readAsBytes();
-  //
-  //       setState(() {
-  //         _newSignatureImage = bytes;
-  //       });
-  //     }
-  //   }
-  // }
-
-
   /// ── Format เบอร์โทร ────────────────────────────────
   String formatPhoneNumber(String phone) {
 
@@ -316,10 +273,9 @@ class _Profile_Edit_PageState extends State<Profile_Edit_Page> {
               context: context,
               barrierDismissible: false,
               builder: (_) => alert_image_one_button(
-                text: "ไม่สามารถแก้ไขข้อมูลของคุณได้\nเนื่องจากอยู่ในโหมด offline",
+                text: "แก้ไขข้อมูลไม่สำเร็จ\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
                 assets_image: "assets/images/no_wifi.png",
                 onPressed: () {
-                  Navigator.of(context).pop();
                   Navigator.of(context).pop();
                 },
                 text_button: "ตกลง",
@@ -373,7 +329,7 @@ class _Profile_Edit_PageState extends State<Profile_Edit_Page> {
                             right: 0,
                             child: Center(
                               child: w_text_big(
-                                name: "Edit profile!",
+                                name: "Edit Profile!",
                                 font_Size: 36,
                                 color: Colors.white,
                                 shadow_color: Colors.black,

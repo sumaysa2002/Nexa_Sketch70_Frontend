@@ -36,7 +36,7 @@ class alert_image_one_button extends StatelessWidget {
       content: StatefulBuilder(
         builder: (context, setState) {
           return SizedBox(
-            width: MediaQuery.of(context).size.width * 0.5, // 50% ของความกว้างหน้าจอ
+            width: MediaQuery.of(context).size.width * 0.5,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -48,8 +48,8 @@ class alert_image_one_button extends StatelessWidget {
                   text,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                     fontFamily: 'NotoSansThai',
                   ),
                 ),

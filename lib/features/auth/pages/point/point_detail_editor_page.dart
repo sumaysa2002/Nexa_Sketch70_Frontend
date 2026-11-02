@@ -119,7 +119,7 @@ class _Point_Detail_Editor_PageState extends State<Point_Detail_Editor_Page> {
             context: context,
             barrierDismissible: false,
             builder: (_) => alert_image_one_button(
-              text: "ไม่สามารถลบหมุดรังวัดได้\nเนื่องจากอยู่ในโหมด offline",
+              text: "ไม่สามารถลบหมุดรังวัดได้\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
               assets_image: "assets/images/no_wifi.png",
               onPressed: () => Navigator.of(context).pop(),
               text_button: "ตกลง",

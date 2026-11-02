@@ -19,6 +19,9 @@ void main() async {
   await Hive.openBox<SavedDrawing>('drawings_field_edit');
   await Hive.openBox<SavedDrawing>('drawings_note_edit');
 
+  // sync ข้อมูล offline อัตโนมัติเมื่อเน็ตกลับมา / แอปกลับมา foreground
+  SyncService.instance.start();
+
   runApp(MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => AuthCubit()),
@@ -57,8 +60,8 @@ class _MyAppState extends State<MyApp> {
           backgroundColor: Colors.grey[900],
           contentTextStyle: const TextStyle(
             fontFamily: 'NotoSansThai',
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
           shape: const RoundedRectangleBorder(

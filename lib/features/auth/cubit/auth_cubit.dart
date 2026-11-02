@@ -325,7 +325,17 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+
   /// ── logout ──────────────────────────────────────
+  /// ── นับข้อมูลที่ยังไม่ได้ส่งขึ้น server (โครงการ + หมุดรังวัด + โปรไฟล์) ──────────
+  Future<int> countPendingSyncData() async {
+    final projects = await TaskLocalRepository().countPending();
+    final points   = await PointTaskLocalRepository().countPending();
+    final user     = await authLocalRepository.getPendingUser();
+    return projects + points + (user != null ? 1 : 0);
+  }
+
+  /// ล้างข้อมูลในเครื่องทั้งหมด รวมถึงข้อมูลที่ยังไม่ sync
   Future<void> logout() async {
     try {
 
@@ -335,9 +345,12 @@ class AuthCubit extends Cubit<AuthState> {
       // ลบข้อมูล User ใน SQLite
       await authLocalRepository.deleteUser();
 
-      // ล้าง taskLocal
-      final taskLocal = TaskLocalRepository();
-      await taskLocal.clearAll();
+      // ล้างโครงการ
+      await TaskLocalRepository().clearAll();
+
+      // ล้างหมุดรังวัดและรูปที่รอ sync
+      await PointTaskLocalRepository().clearAll();
+      await PendingPointImageService().deleteAll();
 
       emit(AuthInitial());
     } catch (e) {

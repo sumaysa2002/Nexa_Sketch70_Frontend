@@ -1063,7 +1063,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
               context: context,
               barrierDismissible: false,
               builder: (_) => alert_image_one_button(
-                text: "ไม่สามารถแก้ไขหมุดรังวัดได้\nเนื่องจากอยู่ในโหมด offline",
+                text: "ไม่สามารถแก้ไขหมุดรังวัดได้\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
                 assets_image: "assets/images/no_wifi.png",
                 onPressed: () => Navigator.of(context).pop(),
                 text_button: "ตกลง",

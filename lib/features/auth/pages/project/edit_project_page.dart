@@ -72,6 +72,7 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
         ? DateTime.tryParse(pj.projectEndDate!) ?? DateTime.now()
         : DateTime.now();
 
+    selectedMembers = pj.memberIds.map(_placeholderMember).toList();
     _loadMembers();
   }
 
@@ -366,36 +367,50 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
   }
 
 
-  /// ── ดึงข้อมูลสมาชิกในโครงการจากฐานข้อมูล ────────────────────────────────────────
+  /// ── ตัวแทนสมาชิกที่ยังไม่รู้ชื่อ (ใช้ระหว่างโหลด) ──
+  static UserModel _placeholderMember(int id) => UserModel(
+    id:        id,
+    titleName: '',
+    firstName: 'สมาชิก',
+    lastName:  '#$id',
+    phone:     '',
+    email:     '',
+    token:     '',
+  );
+
+  /// ── แทนตัวแทนด้วยข้อมูลจริง ─────────
+  void _resolveMembers(List<UserModel> users) {
+    if (!mounted || users.isEmpty) return;
+    final byId = {for (final u in users) u.id: u};
+    setState(() {
+      selectedMembers = selectedMembers
+          .map((m) => byId[m.id] ?? m)
+          .toList();
+    });
+  }
+
+  /// ── ดึงข้อมูลสมาชิกในโครงการ: cache ในเครื่องก่อน แล้วค่อยอัปเดตจาก server ──
   Future<void> _loadMembers() async {
     if (widget.project.memberIds.isEmpty) return;
 
+    // 1) จาก SQLite >> แสดงได้ทันทีแม้ offline
     try {
-      final authState = context.read<AuthCubit>().state;
-      if (authState is! AuthLoggedIn) return;
-
-      final repo = AuthRemoteRepository();
-      final allUsers = await repo.getAllUsers(token: authState.userModel.token);
-
-      // กรองเฉพาะ user ที่อยู่ใน memberIds
-      final members = allUsers
-          .where((u) => widget.project.memberIds.contains(u.id))
-          .toList();
-
-      setState(() {
-        selectedMembers = members;
-      });
+      final localUsers = await AuthLocalRepository().getApprovedUsers();
+      _resolveMembers(localUsers);
     } catch (e) {
-      final authLocal = AuthLocalRepository();
-      final localUsers = await authLocal.getApprovedUsers();
+      if (kDebugMode) debugPrint('_loadMembers (local) error: $e');
+    }
 
-      final members = localUsers
-          .where((u) => widget.project.memberIds.contains(u.id))
-          .toList();
+    // 2) จาก server >> อัปเดตชื่อ/รูปล่าสุด
+    if (!mounted) return;
+    final authState = context.read<AuthCubit>().state;
+    if (authState is! AuthLoggedIn) return;
 
-      setState(() {
-        selectedMembers = members;
-      });
+    try {
+      final users = await AuthRemoteRepository().getAllUsers(token: authState.userModel.token);
+      _resolveMembers(users);
+    } catch (e) {
+      if (kDebugMode) debugPrint('_loadMembers (remote) error: $e');
     }
   }
 
@@ -497,7 +512,7 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
       child: BlocListener<TaskCubit, TaskState>(
         listener: (context, state) {
 
-          /// สร้างโครงการสำเร็จ
+          /// แก้ไขโครงการสำเร็จ
           if (state is UpdateProjectSuccess) {
             showDialog(
               context: context,
@@ -883,20 +898,45 @@ class _MemberPickerDialogState extends State<_MemberPickerDialog> {
   }
 
   Future<void> _fetchUsers() async {
+    // 1) จาก SQLite >> แสดงรายชื่อได้ทันที
     try {
-      final repo = AuthRemoteRepository();
-      final users = await repo.getAllUsers(token: widget.token);
+      final local = await AuthLocalRepository().getApprovedUsers();
+      if (mounted && local.isNotEmpty) {
+        setState(() {
+          _allUsers = local;
+          _filtered = _applySearch(local, _searchController.text);
+          _isLoading = false;
+        });
+      }
+    } catch (_) {}
+
+    // 2) จาก server >> อัปเดตรายชื่อล่าสุด
+    try {
+      final users = await AuthRemoteRepository().getAllUsers(token: widget.token);
+      if (!mounted) return;
       setState(() {
         _allUsers = users;
-        _filtered = users;
+        _filtered = _applySearch(users, _searchController.text);
         _isLoading = false;
+        _error = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        if (_allUsers.isEmpty) _error = 'ไม่สามารถโหลดรายชื่อสมาชิกได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง';
         _isLoading = false;
       });
     }
+  }
+
+  // กรองรายชื่อตามการค้นหา
+  List<UserModel> _applySearch(List<UserModel> users, String query) {
+    if (query.isEmpty) return users;
+    final q = query.toLowerCase();
+    return users.where((u) {
+      final full = "${u.firstName} ${u.lastName}".toLowerCase();
+      return full.contains(q) || u.email.toLowerCase().contains(q);
+    }).toList();
   }
 
   // ค้นหา
@@ -987,7 +1027,7 @@ class _MemberPickerDialogState extends State<_MemberPickerDialog> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                  ? Center(child: Text("เกิดข้อผิดพลาด: $_error", style: const TextStyle(color: Colors.red, fontFamily: 'NotoSansThai')))
+                  ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red, fontFamily: 'NotoSansThai')))
                   : _filtered.isEmpty
                   ? const Center(child: Text("ไม่พบผู้ใช้งาน", style: TextStyle(fontFamily: 'NotoSansThai', color: Colors.grey)))
                   : ListView.builder(

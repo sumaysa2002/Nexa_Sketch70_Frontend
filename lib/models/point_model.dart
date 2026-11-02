@@ -1,5 +1,13 @@
 import 'dart:convert';
 
+/// ── สถานะ sync ของหมุด (card) ──
+enum PointSyncStatus {
+  synced,         // ขึ้น server แล้ว
+  pendingCreate,  // สร้างตอน offline ยังไม่ขึ้น server
+  pendingUpdate,  // แก้ไขตอน offline ยังไม่ขึ้น server
+  failed,         // server ปฏิเสธ
+}
+
 class PointModel {
   final int id;
   final int projectId;
@@ -67,6 +75,15 @@ class PointModel {
 
   final String? pointNote;
 
+  /// idempotency key ที่ client สร้างตอนบันทึกหมุดครั้งแรก
+  final String? clientUuid;
+
+  /// สถานะ sync (อ่านจาก SQLite) + ข้อความ error ล่าสุด
+  final PointSyncStatus syncStatus;
+  final String? syncError;
+
+  bool get isPendingSync => syncStatus != PointSyncStatus.synced;
+
   PointModel({
     required this.id,
     required this.projectId,
@@ -114,7 +131,11 @@ class PointModel {
     this.wSurveyImg,
     this.surveyTechnician,
     this.surveyQc,
-    this.pointNote
+    this.pointNote,
+
+    this.clientUuid,
+    this.syncStatus = PointSyncStatus.synced,
+    this.syncError,
   });
 
 
@@ -175,6 +196,8 @@ class PointModel {
     String? pointNote,
 
     List<String> removedFields = const [],
+
+    PointSyncStatus? syncStatus,
   }) {
 
     // ถ้าลบไฟล์ >> คืนค่า null
@@ -240,6 +263,10 @@ class PointModel {
       surveyQc: surveyQc ?? this.surveyQc,
 
       pointNote: pointNote ?? this.pointNote,
+
+      clientUuid: clientUuid,
+      syncStatus: syncStatus ?? this.syncStatus,
+      syncError: syncStatus == null ? syncError : null,
     );
   }
 
@@ -301,6 +328,8 @@ class PointModel {
       surveyQc:             json['survey_qc'] as int?,
 
       pointNote:            json['point_note'] as String?,
+
+      clientUuid:           json['client_uuid'] as String?,
     );
   }
 
@@ -360,6 +389,7 @@ class PointModel {
     'survey_technician':    surveyTechnician,
     'survey_qc':            surveyQc,
 
-    'point_note':            pointNote
+    'point_note':            pointNote,
+    'client_uuid':          clientUuid,
   };
 }

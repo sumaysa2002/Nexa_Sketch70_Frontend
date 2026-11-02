@@ -59,7 +59,7 @@ class _Profile_PageState extends State<Profile_Page> {
                         child: Align(
                           alignment: Alignment.topCenter,
                           child: w_text_big(
-                            name: "My profile!",
+                            name: "My Profile!",
                             font_Size: 36,
                             color: Colors.white,
                             shadow_color: Colors.black,
@@ -145,7 +145,7 @@ class _Profile_PageState extends State<Profile_Page> {
                                       context: context,
                                       barrierDismissible: false,
                                       builder: (_) => alert_image_one_button(
-                                        text: "ไม่สามารถแก้ไขข้อมูลของคุณได้\nเนื่องจากอยู่ในโหมด offline",
+                                        text: "แก้ไขข้อมูลไม่สำเร็จ\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
                                         assets_image: "assets/images/no_wifi.png",
                                         onPressed: () => Navigator.of(context).pop(),
                                         text_button: "ตกลง",
@@ -300,11 +300,11 @@ class _Profile_PageState extends State<Profile_Page> {
                               size: 20,
                             ),
                             label: const Text(
-                              'SIGN OUT',
+                              'ออกจากระบบ',
                               style: TextStyle(
                                 fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                fontFamily: 'InstrumentSans',
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'NotoSansThai',
                                 letterSpacing: .5,
                               ),
                             ),
@@ -332,8 +332,89 @@ class _Profile_PageState extends State<Profile_Page> {
     );
   }
 
-  /// pop up ออกจากระบบ
-  void _showLogoutDialog(BuildContext context) {
+  /// pop up ยืนยันออกจากระบบ (กรณีมีข้อมูลค้าง)
+  Future<void> _showLogoutDialog(BuildContext context) async {
+    final authCubit = context.read<AuthCubit>();
+    final pending = await authCubit.countPendingSyncData();
+    if (!context.mounted) return;
+
+    if (pending == 0) {
+      _showConfirmLogoutDialog(context);
+      return;
+    }
+
+    final action = await showDialog<_LogoutAction>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _PendingSyncDialog(pending: pending),
+    );
+    if (!context.mounted || action == null || action == _LogoutAction.cancel) return;
+
+    if (action == _LogoutAction.discard) {
+      authCubit.logout();
+      return;
+    }
+
+    // ── ลองส่งข้อมูลทั้งหมด แล้วนับใหม่ ──
+    final remaining = await _syncAllPending(context);
+    if (!context.mounted) return;
+
+    if (remaining == 0) {
+      _showConfirmLogoutDialog(context);
+    } else {
+      // มีรายการที่ server ปฏิเสธ >> แสดงสาเหตุ (สูงสุด 3 รายการ) แทนการบอกแค่ให้เช็คเน็ต
+      final issues = await SyncService.instance.describeSyncIssues();
+      if (!context.mounted) return;
+
+      final detail = issues.isEmpty
+          ? 'กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง'
+          : [
+        ...issues.take(3),
+        if (issues.length > 3) 'และอีก ${issues.length - 3} รายการ',
+      ].join('\n');
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => alert_image_one_button(
+          text: 'ส่งข้อมูลไม่สำเร็จ\n$detail',
+          assets_image: "assets/images/no_wifi.png",
+          text_button: "ตกลง",
+          onPressed: () => Navigator.pop(dialogContext),
+        ),
+      );
+    }
+  }
+
+  /// ซิงค์ข้อมูลที่ค้างทั้งหมด (โครงการ >> หมุดรังวัด >> โปรไฟล์)
+  Future<int> _syncAllPending(BuildContext context) async {
+    final authCubit  = context.read<AuthCubit>();
+
+    final state = authCubit.state;
+    if (state is! AuthLoggedIn) return authCubit.countPendingSyncData();
+    final token = state.userModel.token;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // ผู้ใช้กด sync เอง >> ลองรายการที่เคยเจอ error ถาวรด้วย
+      await SyncService.instance.syncAll(token, retryBlocked: true);
+      await authCubit.syncPendingUser(token: token);
+    } catch (e) {
+      if (kDebugMode) debugPrint('_syncAllPending error: $e');
+    } finally {
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    return authCubit.countPendingSyncData();
+  }
+
+  /// pop up ยืนยันออกจากระบบ (กรณีไม่มีข้อมูลค้าง)
+  void _showConfirmLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -347,6 +428,153 @@ class _Profile_PageState extends State<Profile_Page> {
           Navigator.pop(dialogContext);
           context.read<AuthCubit>().logout();
         },
+      ),
+    );
+  }
+}
+
+/// เตือนข้อมูลค้างก่อน logout
+enum _LogoutAction { cancel, discard, sync }
+
+
+/// ── pop up ข้อมูลค้าง ──
+class _PendingSyncDialog extends StatelessWidget {
+  final int pending;
+  const _PendingSyncDialog({required this.pending});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30),
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      title: Center(
+        child: Container(
+          width: 90,
+          height: 90,
+          decoration: const BoxDecoration(
+            color: Color(0xFFF7F7F8),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.cloud_upload_outlined,
+            size: 44,
+            color: Color(0xFF18181C),
+          ),
+        ),
+      ),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.5,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+
+            const SizedBox(height: 20),
+
+            const Text(
+              'มีข้อมูลที่ยังไม่ได้ส่งขึ้นเซิร์ฟเวอร์',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'NotoSansThai',
+                color: Color(0xFF18181C),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              'มีข้อมูล $pending รายการที่บันทึกไว้ขณะไม่มีอินเทอร์เน็ต\nข้อมูลเหล่านี้จะถูกลบหากออกจากระบบ',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'NotoSansThai',
+                color: Color(0xFF707078),
+              ),
+            ),
+
+            const SizedBox(height: 22),
+
+            /// ปุ่มส่งข้อมูล
+            _DialogButton(
+              text: 'ส่งข้อมูลขึ้นเซิร์ฟเวอร์',
+              background: const Color(0xFF18181C),
+              foreground: Colors.white,
+              onPressed: () => Navigator.pop(context, _LogoutAction.sync),
+            ),
+
+            const SizedBox(height: 10),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _DialogButton(
+                    text: 'ยกเลิก',
+                    background: const Color(0xFFF3F3F5),
+                    foreground: const Color(0xFF18181C),
+                    onPressed: () => Navigator.pop(context, _LogoutAction.cancel),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _DialogButton(
+                    text: 'ทิ้งข้อมูลและออก',
+                    background: const Color(0xFFFDECEC),
+                    foreground: Colors.red,
+                    onPressed: () => Navigator.pop(context, _LogoutAction.discard),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DialogButton extends StatelessWidget {
+  final String text;
+  final Color background;
+  final Color foreground;
+  final VoidCallback onPressed;
+
+  const _DialogButton({
+    required this.text,
+    required this.background,
+    required this.foreground,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          backgroundColor: background,
+          foregroundColor: foreground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'NotoSansThai',
+          ),
+        ),
       ),
     );
   }

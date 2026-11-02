@@ -29,6 +29,15 @@ class Export_Project {
   /// ── โหลดรูปจาก URL ────────────────────────────────────
   static Future<pw.ImageProvider?> _loadImage(String? url, String token) async {
     if (url == null || url.trim().isEmpty) return null;
+
+    // รูปของหมุดที่ยังไม่ sync >> อ่านจากไฟล์ในเครื่อง
+    if (url.startsWith('local://')) {
+      try {
+        final file = File(url.replaceFirst('local://', ''));
+        if (await file.exists()) return pw.MemoryImage(await file.readAsBytes());
+      } catch (_) {}
+      return null;
+    }
     try {
       final res = await http.get(
         Uri.parse(url),
@@ -44,6 +53,8 @@ class Export_Project {
   /// ── URL point ──────────────────────────────────────────
   static String _imgUrl(PointModel p, String? filename) {
     if (filename == null || filename.trim().isEmpty) return '';
+    // หมุดที่ยังไม่ sync >> ส่ง local path ต่อให้ _loadImage อ่านจากไฟล์ในเครื่อง
+    if (filename.startsWith('local://')) return filename;
     return SecureImage.pointUrl(p.projectId, p.id, filename);
   }
 

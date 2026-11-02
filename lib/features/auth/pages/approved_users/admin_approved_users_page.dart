@@ -94,7 +94,7 @@ class _Admin_Approved_Users_PageState extends State<Admin_Approved_Users_Page> {
   }
 
 
-  /// ── ยกเลิกการอนุมัติสมาชิก ──────────────────────
+  /// ── ถอนการอนุมัติสมาชิก ──────────────────────
   Future<void> _removeMember(UserModel member) async {
     final authState = context.read<AuthCubit>().state;
     if (authState is! AuthLoggedIn) return;
@@ -119,7 +119,7 @@ class _Admin_Approved_Users_PageState extends State<Admin_Approved_Users_Page> {
             context: context,
             barrierDismissible: false,
             builder: (_) => alert_image_one_button(
-              text:         'ยกเลิกการอนุมัติสมาชิกสำเร็จ',
+              text:         'ถอนการอนุมัติสมาชิกสำเร็จ',
               assets_image: 'assets/images/checkmark.png',
               text_button:  'ตกลง',
               onPressed: () {
@@ -130,7 +130,7 @@ class _Admin_Approved_Users_PageState extends State<Admin_Approved_Users_Page> {
           );
         }
       } else {
-        _showError('ไม่สามารถยกเลิกการอนุมัติสมาชิกได้');
+        _showError('ไม่สามารถถอนการอนุมัติสมาชิกได้');
       }
     } catch (e) {
       _showOfflineWarning();
@@ -138,7 +138,7 @@ class _Admin_Approved_Users_PageState extends State<Admin_Approved_Users_Page> {
   }
 
 
-  /// ── Popup ยืนยันยกเลิกการอนุมัติสมาชิก ───────────────────────────────────────────────────────
+  /// ── Popup ยืนยันถอนการอนุมัติสมาชิก ───────────────────────────────────────────────────────
   void _showRemoveConfirm(UserModel member) {
     if (!_isOnline) {
       _showOfflineWarning();
@@ -150,8 +150,7 @@ class _Admin_Approved_Users_PageState extends State<Admin_Approved_Users_Page> {
       builder: (_) =>
 
           alert_image_two_button(
-            text: "ยกเลิกการอนุมัติสมาชิก\n${member.titleName} ${member.firstName} ${member.lastName}",
-            one_fontWeight: FontWeight.w700,
+            text: "ถอนการอนุมัติสมาชิก\n${member.titleName} ${member.firstName} ${member.lastName}",
             assets_image: "assets/images/icon_bin.png",
             one_text_button: "ยกเลิก",
             one_onPressed: () => Navigator.of(context).pop(),
@@ -182,7 +181,7 @@ class _Admin_Approved_Users_PageState extends State<Admin_Approved_Users_Page> {
       context: context,
       barrierDismissible: false,
       builder: (_) => alert_image_one_button(
-        text: "ไม่สามารถแก้ไขการอนุมัติสมาชิกได้\nเนื่องจากอยู่ในโหมด offline",
+        text: "ไม่สามารถแก้ไขการอนุมัติสมาชิกได้\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
         assets_image: "assets/images/no_wifi.png",
         onPressed: () {
           Navigator.of(context).pop();
@@ -576,7 +575,7 @@ class _MemberCard extends StatelessWidget {
 
           const SizedBox(height: 14),
 
-          // ปุ่มยกเลิกการอนุมัติสมาชิก
+          // ปุ่มถอนการอนุมัติสมาชิก
           if (!_isAdmin)
             SizedBox(
               width: double.infinity,
@@ -592,7 +591,7 @@ class _MemberCard extends StatelessWidget {
                 onPressed: onRemove,
                 icon: const Icon(Icons.person_remove_rounded, size: 18),
                 label: const Text(
-                  'ยกเลิกการอนุมัติสมาชิก',
+                  'ถอนการอนุมัติสมาชิก',
                   style: TextStyle(
                     fontFamily: 'NotoSansThai', fontWeight: FontWeight.w600,
                     fontSize: 14,
@@ -963,7 +962,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                     SizedBox(height: 10),
 
                     Text(
-                      "ไม่สามารถอนุมัติสมาชิกได้\nเนื่องจากอยู่ในโหมด offline",
+                      "ไม่สามารถอนุมัติสมาชิกได้\nกรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,
