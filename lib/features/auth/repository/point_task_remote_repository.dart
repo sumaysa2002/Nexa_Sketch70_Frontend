@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 /// ติดต่อ server ไม่ได้ >> บันทึกในเครื่องแล้ว sync ทีหลัง
 class _SaveOfflineException implements Exception {

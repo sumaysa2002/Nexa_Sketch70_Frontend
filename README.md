@@ -1,4 +1,4 @@
-# offline_gnss69_new
+# Nexa Sketch
 
 A new Flutter project.
 

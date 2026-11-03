@@ -1,4 +1,4 @@
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 class About_Us_Page extends StatefulWidget {
 

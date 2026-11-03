@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 /// ── แสดงรูปของ point ไม่ว่าจะเป็น filename จาก server หรือ local path ──────────────────
 Widget buildPointImage(

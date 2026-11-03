@@ -1,4 +1,4 @@
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 class alert_image_two_button extends StatelessWidget {
   final String text;

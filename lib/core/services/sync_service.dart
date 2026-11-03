@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 /// ── สร้าง UUID v4 สำหรับใช้เป็น idempotency key (ไม่ต้องเพิ่ม package) ──
 String generateClientUuid() {

@@ -1,4 +1,4 @@
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +51,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Nexa Sketch',
       theme: ThemeData(
         progressIndicatorTheme: const ProgressIndicatorThemeData(
           color: Color(0xFF18181C),

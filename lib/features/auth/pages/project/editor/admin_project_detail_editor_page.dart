@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 class Admin_Project_Detail_Editor_Page extends StatefulWidget {
   final ProjectModel project;

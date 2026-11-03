@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
-import 'package:offline_gnss69_new/export.dart';
-import 'package:offline_gnss69_new/features/widgets/draw/shape_curve.dart';
-import 'package:offline_gnss69_new/features/widgets/draw/draggable_curve.dart';
+import 'package:nexa_sketch/export.dart';
+import 'package:nexa_sketch/features/widgets/draw/shape_curve.dart';
+import 'package:nexa_sketch/features/widgets/draw/draggable_curve.dart';
 
 
 class Note_CreateNewPoint extends StatefulWidget {

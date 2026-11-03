@@ -1,6 +1,6 @@
 import 'package:http/http.dart' as http;
 
-import 'package:offline_gnss69_new/export.dart' hide AppException, safeErrorMessage;
+import 'package:nexa_sketch/export.dart' hide AppException, safeErrorMessage;
 
 import '../../widgets/otp/app_exception.dart';
 

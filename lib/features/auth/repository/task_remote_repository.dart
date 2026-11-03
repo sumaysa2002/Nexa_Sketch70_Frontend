@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 /// offline >> server ปลายทางไม่พร้อม (gateway 502/503/504)
 class _ServerUnavailableException implements Exception {

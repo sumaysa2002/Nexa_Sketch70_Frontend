@@ -1,6 +1,6 @@
 {
-    "name": "offline_gnss69_new",
-    "short_name": "offline_gnss69_new",
+    "name": "Nexa Sketch",
+    "short_name": "Nexa Sketch",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

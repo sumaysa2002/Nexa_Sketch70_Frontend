@@ -1,6 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 
 class Export_Project {

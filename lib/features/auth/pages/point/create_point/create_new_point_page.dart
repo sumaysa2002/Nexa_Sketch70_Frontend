@@ -1,6 +1,6 @@
-import 'package:offline_gnss69_new/export.dart';
-import 'package:offline_gnss69_new/features/auth/pages/point/create_point/note_create_new_point.dart';
-import 'package:offline_gnss69_new/features/widgets/field/point_text_field_column_c5_edit.dart';
+import 'package:nexa_sketch/export.dart';
+import 'package:nexa_sketch/features/auth/pages/point/create_point/note_create_new_point.dart';
+import 'package:nexa_sketch/features/widgets/field/point_text_field_column_c5_edit.dart';
 
 class CreateNewPoint_Page extends StatefulWidget {
 

@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:offline_gnss69_new/features/widgets/draw/linestyle.dart';
+import 'package:nexa_sketch/features/widgets/draw/linestyle.dart';
 import 'drawing_area.dart';
 import 'shape_curve.dart';
 

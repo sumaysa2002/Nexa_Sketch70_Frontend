@@ -1,4 +1,4 @@
-import 'package:offline_gnss69_new/export.dart';
+import 'package:nexa_sketch/export.dart';
 
 /// ── จัดการรูปภาพของ Point ที่สร้างแบบ Offline และยังไม่ได้ Sync ขึ้น Server (โครงสร้าง: {AppDocuments}/pending_points/{pointId}/{fieldName}.jpg) ────────
 class PendingPointImageService {

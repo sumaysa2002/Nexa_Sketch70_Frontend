@@ -1,4 +1,4 @@
-import 'package:offline_gnss69_new/export.dart' hide safeErrorMessage;
+import 'package:nexa_sketch/export.dart' hide safeErrorMessage;
 
 import '../../widgets/otp/app_exception.dart';
 
