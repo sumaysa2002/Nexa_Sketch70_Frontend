@@ -1,0 +1,16 @@
+.git/
+build/
+.dart_tool/
+.idea/
+*.iml
+android/build/
+android/.gradle/
+android/local.properties
+ios/Pods/
+macos/Pods/
+.flutter-plugins-dependencies
+.env
+.env.*
+*.jks
+*.keystore
+key.properties
