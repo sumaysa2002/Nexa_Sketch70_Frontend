@@ -1,4 +1,4 @@
-package com.example.offline_gnss69_new
+package th.or.gistda.nexasketch
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.offline_gnss69_new">
+    package="th.or.gistda.nexasketch">
 
     <uses-permission
         android:name="android.permission.CAMERA"
