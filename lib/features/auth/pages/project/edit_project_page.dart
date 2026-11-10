@@ -37,6 +37,13 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
   String? survey_main;
   String? survey_sub;
   List<UserModel> selectedMembers = [];
+
+  // id สมาชิกที่โหลดข้อมูลแล้ว (ยังไม่อยู่ในนี้ = "สมาชิก#id")
+  final Set<int> _resolvedMemberIds = {};
+
+  // แก้ไขสมาชิกได้เฉพาะตอนเชื่อมต่อ server ได้ (offline >> ดูได้อย่างเดียว)
+  bool _membersEditable  = false;
+  bool _checkingOnline   = true;
   late DateTime start_date;
   late DateTime end_date;
 
@@ -74,6 +81,38 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
 
     selectedMembers = pj.memberIds.map(_placeholderMember).toList();
     _loadMembers();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkMembersEditable());
+  }
+
+  /// ── เช็คว่าสามารถแก้ไขสมาชิกได้ไหม (ping server จริง ไม่ใช่แค่เช็ค wifi) ──────────
+  Future<void> _checkMembersEditable() async {
+
+    // โครงการที่สร้างตอน offline ยังไม่อยู่บน server >> แก้สมาชิกได้
+    if (widget.project.id < 0) {
+      if (mounted) setState(() { _membersEditable = true; _checkingOnline = false; });
+      return;
+    }
+
+    // ตรวจสอบสถานะอินเทอร์เน็ต
+    if (mounted) setState(() => _checkingOnline = true);
+
+    // ตรวจสอบสถานะผู้ใช้งาน
+    bool ok = false;
+    final authState = context.read<AuthCubit>().state;
+
+    // ตรวจสอบการเชื่อมต่อ Backend API
+    if (authState is AuthLoggedIn) {
+      try {
+        ok = await TaskRemoteRepository().pingApi(token: authState.userModel.token);
+      } catch (_) {}
+    }
+
+    // อัปเดตสถานะหลังตรวจสอบเสร็จ
+    if (mounted) setState(() {
+      _membersEditable = ok;
+      _checkingOnline = false;
+    });
   }
 
 
@@ -285,15 +324,23 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
 
         const SizedBox(height: 10),
 
-        // popup conten
+        // popup เลือกสมาชิก (offline >> กดไม่ได้)
         InkWell(
-          onTap: () => _showMemberDialog(context, parentSetState),
+          onTap: _membersEditable
+              ? () => _showMemberDialog(context, parentSetState)
+              : null,
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: const Color.fromARGB(255, 34, 34, 34), width: 1.2),
+              color: _membersEditable ? null : Colors.grey.shade100,
+              border: Border.all(
+                color: _membersEditable
+                    ? const Color.fromARGB(255, 34, 34, 34)
+                    : Colors.grey.shade400,
+                width: 1.2,
+              ),
             ),
             child: selectedMembers.isEmpty
             // ยังไม่เลือก
@@ -309,20 +356,79 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
                 : Wrap(
               spacing: 8,
               runSpacing: 8,
+
               children: selectedMembers.map((member) {
+                final isFormer = _isFormerMember(member);
+
                 return Chip(
-                  backgroundColor: const Color(0xFF18181C),
+                  backgroundColor: isFormer
+                      ? const Color(0xFFFDECEC)
+                      : const Color(0xFF18181C),
+
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    side: BorderSide(
+                      color: isFormer
+                          ? const Color(0xFFF5B5B5)
+                          : Colors.transparent,
+                      width: 1,
+                    ),
+                  ),
+
                   avatar: CircleAvatar(
                     backgroundImage: member.profileImg != null
-                        ? NetworkImage(SecureImage.profileUrl(member.profileImg), headers: SecureImage.authHeaders)
+                        ? NetworkImage(
+                      SecureImage.profileUrl(member.profileImg),
+                      headers: SecureImage.authHeaders,
+                    )
                         : null,
-                    backgroundColor: Colors.grey.shade300,
+                    backgroundColor: isFormer
+                        ? const Color(0xFFE57373)
+                        : Colors.grey.shade300,
                     child: member.profileImg == null
-                        ? const Icon(Icons.person,
-                        size: 16, color: Colors.white)
+                        ? const Icon(
+                      Icons.person,
+                      size: 16,
+                      color: Colors.white,
+                    )
                         : null,
                   ),
-                  label: Text(
+
+                  label: isFormer
+                      ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "${member.firstName} ${member.lastName}",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontFamily: 'NotoSansThai',
+                          color: Color(0xFF9B2525),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFC62828).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          "ถูกถอนการอนุมัติ",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'NotoSansThai',
+                            color: Color(0xFFC62828),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                      : Text(
                     "${member.firstName} ${member.lastName}",
                     style: const TextStyle(
                       fontSize: 14,
@@ -330,16 +436,64 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
                       color: Colors.white,
                     ),
                   ),
-                  deleteIcon: const Icon(Icons.close,
-                      size: 16, color: Colors.white70),
-                  onDeleted: () {
-                    parentSetState(() => selectedMembers.remove(member));
+
+                  deleteIcon: Icon(
+                    Icons.close,
+                    size: 16,
+                    color: isFormer
+                        ? const Color(0xFFC62828)
+                        : Colors.white70,
+                  ),
+
+                  // ลบสมาชิกได้เมื่อ online เท่านั้น
+                  onDeleted: !_membersEditable ||
+                      (!_isOwnerAdmin &&
+                          (isFormer || !_resolvedMemberIds.contains(member.id)))
+                      ? null
+                      : () async {
+                    if (isFormer &&
+                        !await _confirmRemoveFormer(member)) return;
+                    parentSetState(
+                          () => selectedMembers.remove(member),
+                    );
                   },
                 );
               }).toList(),
             ),
           ),
         ),
+
+        // แจ้งสถานะ offline / กำลังตรวจสอบ (แตะเพื่อตรวจใหม่)
+        if (!_membersEditable) ...[
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: _checkingOnline ? null : _checkMembersEditable,
+            child: Row(
+              children: [
+                _checkingOnline
+                    ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                    : Icon(Icons.cloud_off, size: 16, color: Colors.grey.shade700),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _checkingOnline
+                        ? "กำลังตรวจสอบการเชื่อมต่ออินเทอร์เน็ต..."
+                        : "ออฟไลน์: สามารถแก้ไขรายชื่อสมาชิกได้เมื่อเชื่อมต่ออินเทอร์เน็ต (แตะเพื่อตรวจสอบอีกครั้ง)",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: 'NotoSansThai',
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -386,7 +540,45 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
       selectedMembers = selectedMembers
           .map((m) => byId[m.id] ?? m)
           .toList();
+      _resolvedMemberIds.addAll(
+        selectedMembers.where((m) => byId.containsKey(m.id)).map((m) => m.id),
+      );
     });
+  }
+
+  /// ── สมาชิกโครงการที่ถูกถอนการอนุมัติจาก admin ─────────
+  bool _isFormerMember(UserModel m) =>
+      _resolvedMemberIds.contains(m.id) &&
+          isFormerProjectMember(m, widget.project.creatorAdminId);
+
+  /// ── ผู้ใช้ปัจจุบันเป็น admin เจ้าของโครงการหรือไม่ ─────────
+  bool get _isOwnerAdmin {
+    final authState = context.read<AuthCubit>().state;
+    if (authState is! AuthLoggedIn) return false;
+    final me = authState.userModel;
+    if (me.status != 'admin') return false;
+    final creatorId = widget.project.creatorAdminId;
+    return creatorId == null || creatorId == me.id;
+  }
+
+  /// ── ยืนยันก่อนลบอดีตสมาชิก (ลบแล้วเพิ่มกลับไม่ได้)───────
+  Future<bool> _confirmRemoveFormer(UserModel member) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => alert_image_two_button(
+        text: '${member.titleName} ${member.firstName} ${member.lastName}\n\n'
+            'ถูกถอนการอนุมัติจากระบบแล้ว\n'
+            'หากยืนยันลบออกจากโครงการ\n'
+            'จะไม่สามารถเพิ่มกลับเข้ามาในโครงการได้อีก',
+        assets_image: "assets/images/question.png",
+        one_text_button: "ยกเลิก",
+        one_onPressed: () => Navigator.pop(ctx, false),
+        two_text_button: "ยืนยัน",
+        two_onPressed: () => Navigator.pop(ctx, true),
+      ),
+    );
+    return ok == true;
   }
 
   /// ── ดึงข้อมูลสมาชิกในโครงการ: cache ในเครื่องก่อน แล้วค่อยอัปเดตจาก server ──
@@ -406,8 +598,12 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
     final authState = context.read<AuthCubit>().state;
     if (authState is! AuthLoggedIn) return;
 
+    // ใช้ users_by_ids >> ได้ทั้งสมาชิกปัจจุบันและถูกถอนการอนุมัติ
     try {
-      final users = await AuthRemoteRepository().getAllUsers(token: authState.userModel.token);
+      final users = await AuthRemoteRepository().getUsersByIds(
+        token: authState.userModel.token,
+        ids:   widget.project.memberIds,
+      );
       _resolveMembers(users);
     } catch (e) {
       if (kDebugMode) debugPrint('_loadMembers (remote) error: $e');

@@ -22,7 +22,7 @@ class AuthLocalRepository {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 5,
       onCreate: (db, version) async {
         // ตาราง user เก็บข้อมูลผู้ใช้งาน
         await db.execute('''
@@ -46,7 +46,7 @@ class AuthLocalRepository {
           )
         ''');
 
-        // ตาราง all_approved_users สำหรับเก็บ list สมาชิกในกลุ่ม
+        // ตาราง all_approved_users สำหรับเก็บ list สมาชิกที่ผ่านการอนุมัติ
         await db.execute('''
           CREATE TABLE all_approved_users(
             id INTEGER PRIMARY KEY,
@@ -66,6 +66,8 @@ class AuthLocalRepository {
             token TEXT
           )
         ''');
+
+        await _createProjectMemberUsersTable(db);
       },
 
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -95,12 +97,9 @@ class AuthLocalRepository {
         }
 
         if (oldVersion < 3) {
-          // เพิ่ม column สำหรับผู้ใช้เดิม
           await db.execute("ALTER TABLE $tableName ADD COLUMN is_updated_pending INTEGER NOT NULL DEFAULT 0");
         }
-
         if (oldVersion < 4) {
-          // สำหรับ device ที่ข้าม version 3 ไป หรือ column ยังไม่มี
           try {
             await db.execute(
                 "ALTER TABLE $tableName ADD COLUMN is_updated_pending INTEGER NOT NULL DEFAULT 0"
@@ -110,9 +109,44 @@ class AuthLocalRepository {
           }
         }
 
+        if (oldVersion < 5) {
+          // เปลี่ยนชื่อตาราง known_users >> project_member_users (ย้ายข้อมูลเดิมมาด้วย)
+          await _createProjectMemberUsersTable(db);
+          try {
+            await db.execute(
+                "INSERT OR IGNORE INTO project_member_users SELECT * FROM known_users"
+            );
+          } catch (_) {
+            // ไม่มีตาราง known_users (ข้าม version 4) → ข้าม
+          }
+          await db.execute("DROP TABLE IF EXISTS known_users");
+        }
       },
     );
 
+  }
+
+  /// ── สร้างตาราง project_member_users ข้อมูลสมาชิกโครงการล่าสุดจาก users_by_ids (รวมอดีตสมาชิกที่ถูกถอนการอนุมัติ) >> ใช้แสดงชื่อ/สถานะตอน offline ──────────────────────────────────────
+  Future<void> _createProjectMemberUsersTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS project_member_users(
+            id INTEGER PRIMARY KEY,
+            title_name TEXT,
+            first_name TEXT,
+            last_name TEXT,
+            phone TEXT,
+            email TEXT,
+            profile_img TEXT,
+            signature TEXT,
+            job_position TEXT,
+            job_level TEXT,
+            job_office TEXT,
+            job_department TEXT,
+            admin TEXT,
+            status TEXT,
+            token TEXT
+      )
+    ''');
   }
 
   /// ── การบันทึกข้อมูล User ผู้เข้าใช้งาน ─────────────────────────────
@@ -177,10 +211,51 @@ class AuthLocalRepository {
     return result.map((e) => UserModel.fromMap(e)).toList();
   }
 
-  /// ── ล้าง all_approved_users ตอน logout ──────────────────────────────────────
+  /// ── ล้าง all_approved_users และ project_member_users ตอน logout ──────────────────────────────────────
   Future<void> deleteApprovedUsers() async {
     final db = await database;
     await db.delete('all_approved_users');
+    await db.delete('project_member_users');
+  }
+
+  /// ── บันทึก/อัปเดตข้อมูลสมาชิกที่ได้จาก users_by_ids ไปยังตาราง project_member_users ──────────────────────────────────────
+  Future<void> upsertProjectMemberUsers(List<UserModel> users) async {
+    if (users.isEmpty) return;
+    final db = await database;
+    final batch = db.batch();
+    for (final user in users) {
+      batch.insert(
+        'project_member_users',
+        user.toMap()..['token'] = '',
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// ── เรียกข้อมูลสมาชิกตาม id จาก project_member_users ──────────────────────────────────────
+  Future<List<UserModel>> getProjectMemberUsersByIds(List<int> ids) async {
+    if (ids.isEmpty) return [];
+    final db = await database;
+    final unique = ids.toSet().toList();
+    final result = await db.query(
+      'project_member_users',
+      where: 'id IN (${List.filled(unique.length, '?').join(',')})',
+      whereArgs: unique,
+    );
+    return result.map((e) => UserModel.fromMap(e)).toList();
+  }
+
+  /// ── หลัง admin ถอนจากรายชื่อที่อนุมัติ >> project_member_users เป็น "ถูกถอนการอนุมัติ" (status/admin = null) ──────────────────────────────────────
+  Future<void> markUserRevoked(int userId) async {
+    final db = await database;
+    await db.delete('all_approved_users', where: 'id = ?', whereArgs: [userId]);
+    await db.update(
+      'project_member_users',
+      {'status': null, 'admin': null},
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
   }
 
   /// ── ฟังก์ชันสำหรับลบข้อมูล tableName เมื่อ logout ──────────────────────────────────────

@@ -382,6 +382,7 @@ class _User_Project_Detail_Viewer_PageState extends State<User_Project_Detail_Vi
                       Expanded(
                         child: _MemberPanel(
                           members: _members,
+                          creatorAdminId: _project.creatorAdminId,
                           isLoaded: _membersLoaded,
                           isOnline: _isOnline,
                           expandedId: _expandedMemberId,
@@ -580,6 +581,7 @@ class _PointListPanel extends StatelessWidget {
 /// ── Member List (ดึงข้อมูลสมาชิกในโครงการ) ──────────────────────
 class _MemberPanel extends StatelessWidget {
   final List<UserModel> members;
+  final int? creatorAdminId;
   final bool isLoaded;
   final bool isOnline;
   final int? expandedId;
@@ -587,6 +589,7 @@ class _MemberPanel extends StatelessWidget {
 
   const _MemberPanel({
     required this.members,
+    this.creatorAdminId,
     required this.isLoaded,
     required this.isOnline,
     required this.expandedId,
@@ -619,13 +622,17 @@ class _MemberPanel extends StatelessWidget {
       );
     }
 
+    // สมาชิกปัจจุบันก่อน แล้วตามด้วยสมาชิกโครงการที่ถูกถอนการอนุมัติจาก admin
+    final sorted = sortCurrentMembersFirst(members, creatorAdminId);
+
     return ListView.builder(
       padding: EdgeInsets.zero,
-      itemCount: members.length,
+      itemCount: sorted.length,
       itemBuilder: (context, index) {
-        final member = members[index];
+        final member = sorted[index];
         return _MemberCard(
           member: member,
+          isRevoked: isFormerProjectMember(member, creatorAdminId),
           isExpanded: expandedId == member.id,
           isOnline: isOnline,
           onTap: () =>
@@ -641,6 +648,7 @@ class _MemberPanel extends StatelessWidget {
 /// ── Member Card ──────────────────────
 class _MemberCard extends StatelessWidget {
   final UserModel member;
+  final bool isRevoked;
   final bool isExpanded;
   final bool isOnline;
   final VoidCallback onTap;
@@ -648,6 +656,7 @@ class _MemberCard extends StatelessWidget {
 
   const _MemberCard({
     required this.member,
+    this.isRevoked = false,
     required this.isExpanded,
     required this.isOnline,
     required this.onTap,
@@ -700,10 +709,13 @@ class _MemberCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          _ProfileAvatar(
-            profileImg: member.profileImg,
-            isOnline: isOnline,
-            radius: 28,
+          Opacity(
+            opacity: isRevoked ? 0.45 : 1,
+            child: _ProfileAvatar(
+              profileImg: member.profileImg,
+              isOnline: isOnline,
+              radius: 28,
+            ),
           ),
           const SizedBox(width: 14),
 
@@ -745,6 +757,10 @@ class _MemberCard extends StatelessWidget {
                       color: Colors.grey.shade600,
                     ),
                   ),
+                if (isRevoked) ...[
+                  const SizedBox(height: 6),
+                  const RevokedMemberBadge(),
+                ],
               ],
             ),
           ),
@@ -773,10 +789,13 @@ class _MemberCard extends StatelessWidget {
       child: Column(
         children: [
 
-          _ProfileAvatar(
-            profileImg: member.profileImg,
-            isOnline: isOnline,
-            radius: 40,
+          Opacity(
+            opacity: isRevoked ? 0.45 : 1,
+            child: _ProfileAvatar(
+              profileImg: member.profileImg,
+              isOnline: isOnline,
+              radius: 40,
+            ),
           ),
 
           const SizedBox(height: 12),
@@ -791,6 +810,11 @@ class _MemberCard extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+
+          if (isRevoked) ...[
+            const SizedBox(height: 8),
+            const RevokedMemberBadge(),
+          ],
 
           const SizedBox(height: 14),
 

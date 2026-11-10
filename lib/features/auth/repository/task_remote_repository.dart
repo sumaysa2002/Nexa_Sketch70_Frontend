@@ -290,6 +290,12 @@ class TaskRemoteRepository {
       // ไม่บันทึก offline >> ส่ง error
       if (!_isOfflineError(e)) rethrow;
 
+      // แก้สมาชิกตอน offline ไม่ได้ (ต้องให้ server ตรวจสิทธิ์/กลุ่มก่อน)
+      if (existing != null &&
+          !_sameIds(existing.memberIds, memberIds)) {
+        throw 'กรุณาเชื่อมต่ออินเทอร์เน็ตก่อนดำเนินการแก้ไขสมาชิกโครงการ';
+      }
+
       // ติดต่อ server ไม่ได้ >> บันทึกลง SQLite >> sync ทีหลัง
       final offlineProject = buildLocal();
       await taskLocalRepository.updateProjectPending(offlineProject);
@@ -297,8 +303,12 @@ class TaskRemoteRepository {
     }
   }
 
+  static bool _sameIds(List<int> a, List<int> b) =>
+      a.toSet().length == b.toSet().length && a.toSet().containsAll(b);
+
   /// ── update project (updateProject และ syncUpdatedProjects) ──
-  static Map<String, dynamic> _updateBody(ProjectModel p) => {
+  // includeMembers = false >> ไม่ส่ง member_ids (ใช้ตอน sync ไม่ให้แก้ไขสมาชิกขณะ offline)
+  static Map<String, dynamic> _updateBody(ProjectModel p, {bool includeMembers = true}) => {
     'name_project_id':    p.nameProjectId,
     'project_name':       p.projectName,
     'project_details':    p.projectDetails,
@@ -311,7 +321,7 @@ class TaskRemoteRepository {
     'project_start_date': p.projectStartDate,
     'project_end_date':   p.projectEndDate,
     'project_note':       p.projectNote,
-    'member_ids':         p.memberIds,
+    if (includeMembers) 'member_ids': p.memberIds,
   };
 
 
@@ -449,7 +459,7 @@ class TaskRemoteRepository {
             'Content-Type': 'application/json',
             'x-auth-token': token,
           },
-          body: jsonEncode(_updateBody(project)),
+          body: jsonEncode(_updateBody(project, includeMembers: false)),
         ).timeout(_timeout).then(_checkGateway);
 
         if (res.statusCode != 200) {

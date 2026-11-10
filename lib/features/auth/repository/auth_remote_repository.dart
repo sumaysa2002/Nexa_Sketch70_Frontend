@@ -395,12 +395,46 @@ class AuthRemoteRepository {
       }
 
       final List<dynamic> data = jsonDecode(res.body);
-      return data.map((item) => _mapToUserModel(item)).toList();
+      final users = data.map((item) => _mapToUserModel(item)).toList();
+
+      // cache ลง SQLite >> ใช้ตอน offline (รวมอดีตสมาชิกที่ถูกถอนการอนุมัติ)
+      try {
+        await authLocalRepository.upsertProjectMemberUsers(users);
+      } catch (_) {}
+
+      return users;
 
     } catch (e) {
-      final localUsers = await authLocalRepository.getApprovedUsers();
-      return localUsers.where((u) => ids.contains(u.id)).toList();
+      return _getUsersByIdsOffline(ids);
     }
+  }
+
+  /// ── users_by_ids ตอน offline (all_approved_users / project_member_users (status/admin = null) ) ──────────────────────────────────────
+  Future<List<UserModel>> _getUsersByIdsOffline(List<int> ids) async {
+    final approved = await authLocalRepository.getApprovedUsers();
+    final members  = await authLocalRepository.getProjectMemberUsersByIds(ids);
+
+    final approvedById = {for (final u in approved) u.id: u};
+    final result = <UserModel>[];
+
+    for (final m in members) {
+      final current = approvedById[m.id];
+      if (current != null) {
+        result.add(current);
+      } else if (approved.isEmpty || m.status == 'admin') {
+        result.add(m);
+      } else {
+        result.add(UserModel.fromMap(m.toMap()
+          ..['status'] = null
+          ..['admin'] = null));
+      }
+    }
+
+    // สมาชิกปัจจุบันที่ยังไม่เคยอยู่ใน project_member_users
+    final memberIds = members.map((u) => u.id).toSet();
+    result.addAll(approved.where((u) => ids.contains(u.id) && !memberIds.contains(u.id)));
+
+    return result;
   }
 
   /// ── สำหรับ admin >> ค้นหา user ที่ยังไม่ได้รับการอนุมัติ ──────────────────
@@ -465,6 +499,8 @@ class AuthRemoteRepository {
     if (res.statusCode != 200) {
       throw jsonDecode(res.body)['error'] ?? 'ยกเลิกการอนุมัติสมาชิกไม่สำเร็จ';
     }
+
+    await authLocalRepository.markUserRevoked(userId);
   }
 
 

@@ -111,6 +111,7 @@ export 'package:nexa_sketch/features/widgets/button/draw_tool_button.dart';
 
 export 'package:nexa_sketch/features/widgets/card/list_project_card.dart';
 export 'package:nexa_sketch/features/widgets/card/list_point_card.dart';
+export 'package:nexa_sketch/features/widgets/card/revoked_member_badge.dart';
 
 export 'package:nexa_sketch/features/widgets/draw/drawing_area.dart';
 export 'package:nexa_sketch/features/widgets/draw/mycustompainter.dart';

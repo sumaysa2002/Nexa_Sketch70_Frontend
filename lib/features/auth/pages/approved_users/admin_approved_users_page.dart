@@ -109,6 +109,11 @@ class _Admin_Approved_Users_PageState extends State<Admin_Approved_Users_Page> {
       );
 
       if (res.statusCode == 200) {
+        // อัปเดต cache ในเครื่อง >> offline จะเห็นป้าย "ถูกถอนการอนุมัติ" ถูกต้อง
+        try {
+          await AuthLocalRepository().markUserRevoked(member.id);
+        } catch (_) {}
+
         if (mounted) {
           setState(() {
             _members.removeWhere((u) => u.id == member.id);

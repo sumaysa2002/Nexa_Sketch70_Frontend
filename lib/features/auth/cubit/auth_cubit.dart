@@ -345,6 +345,9 @@ class AuthCubit extends Cubit<AuthState> {
       // ลบข้อมูล User ใน SQLite
       await authLocalRepository.deleteUser();
 
+      // ล้าง all_approved_users และ project_member_users
+      await authLocalRepository.deleteApprovedUsers();
+
       // ล้างโครงการ
       await TaskLocalRepository().clearAll();
 

@@ -5,7 +5,6 @@ class Constants {
   // C:\Users\Gistda\AppData\Local\Android\Sdk\platform-tools\adb.exe devices
   // R52Y4026RHL   device
   // C:\Users\Gistda\AppData\Local\Android\Sdk\platform-tools\adb.exe -s R52Y4026RHL reverse tcp:3000 tcp:3000
-  // static String backendUri = "http://localhost:3000";
   static const String backendUri = String.fromEnvironment(
     'BACKEND_URI',
     defaultValue: 'http://localhost:3000',
