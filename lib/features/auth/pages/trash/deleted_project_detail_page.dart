@@ -66,8 +66,7 @@ class _DeletedProjectDetailViewState extends State<_DeletedProjectDetailView> {
   }
 
   String _dateText(String? iso) {
-    final d = iso == null ? null : DateTime.tryParse(iso);
-    return d == null ? '-' : d.toString().split(' ')[0];
+    return displayDate(iso);
   }
 
   @override

@@ -186,8 +186,8 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
         ? pj.province!.split(', ')
         : [];
 
-    final String startDate = pj.projectStartDate ?? '-';
-    final String endDate   = pj.projectEndDate   ?? '-';
+    final String startDate = displayDate(pj.projectStartDate);
+    final String endDate   = displayDate(pj.projectEndDate);
 
     return BlocListener<TaskCubit, TaskState>(
       listener: (context, state) {

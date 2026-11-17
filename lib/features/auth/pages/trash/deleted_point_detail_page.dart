@@ -495,7 +495,7 @@ class _Deleted_Point_Detail_PageState extends State<Deleted_Point_Detail_Page> {
                             icon: Icons.calendar_month,
                             color: Colors.red,
                             label: 'วันที่สำรวจ',
-                            value: '${_d(widget.point.pointDate)}',
+                            value: displayDate(widget.point.pointDate),
                           ),
                         ]
 

@@ -155,8 +155,8 @@ class _User_Project_Detail_Viewer_PageState extends State<User_Project_Detail_Vi
         ? pj.province!.split(', ')
         : [];
 
-    final String startDate = pj.projectStartDate ?? '-';
-    final String endDate   = pj.projectEndDate   ?? '-';
+    final String startDate = displayDate(pj.projectStartDate);
+    final String endDate   = displayDate(pj.projectEndDate);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),

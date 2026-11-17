@@ -43,7 +43,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
   void start_date_Selected(DateTime day, DateTime focusedDay) {
     setState(() {
       start_date = day;
-      project_start_date_Controller.text = day.toString().split(" ")[0];
+      project_start_date_Controller.text = displayDate(day);
     });
   }
 
@@ -52,7 +52,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
   void end_date_Selected(DateTime day, DateTime focusedDay) {
     setState(() {
       end_date = day;
-      project_end_date_Controller.text = day.toString().split(" ")[0];
+      project_end_date_Controller.text = displayDate(day);
     });
   }
 
@@ -368,8 +368,6 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
       return trimmed.isEmpty ? null : trimmed;
     }
 
-    // ตัวแปรช่วย — วันปัจจุบันในรูปแบบ yyyy-MM-dd
-    final today = DateTime.now().toString().split(' ')[0];
 
     context.read<TaskCubit>().createProject(
       token:            token,
@@ -383,12 +381,8 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
       surveyMain:       survey_main,
       surveySub:        survey_sub,
       // ถ้าไม่ได้เลือกวัน >> ใช้วันปัจจุบัน
-      projectStartDate: project_start_date_Controller.text.isEmpty
-          ? today
-          : project_start_date_Controller.text,
-      projectEndDate:   project_end_date_Controller.text.isEmpty
-          ? today
-          : project_end_date_Controller.text,
+      projectStartDate: isoDate(start_date), // เก็บเป็น yyyy-MM-dd
+      projectEndDate:   isoDate(end_date),   // เก็บเป็น yyyy-MM-dd
       projectNote:      _nullIfEmpty(project_note_Controller.text),
       memberIds:        selectedMembers.map((m) => m.id).toList(),
     );
@@ -638,7 +632,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                         Expanded(
                                             child: text_field_date_column(
                                               name: "วันเริ่มต้นการสำรวจ",
-                                              hint_Text: start_date.toString().split(" ")[0],
+                                              hint_Text: displayDate(start_date),
                                               controller: project_start_date_Controller,
                                             )
                                         ),
@@ -648,7 +642,7 @@ class _Create_New_Project_PageState extends State<Create_New_Project_Page> {
                                         Expanded(
                                           child: text_field_date_column(
                                             name: "วันสิ้นสุดการสำรวจ",
-                                            hint_Text: end_date.toString().split(" ")[0],
+                                            hint_Text: displayDate(end_date),
                                             controller: project_end_date_Controller,
                                           ),
                                         ),

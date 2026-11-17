@@ -105,6 +105,7 @@ export 'package:nexa_sketch/features/auth/repository/task_local_repository.dart'
 export 'package:nexa_sketch/features/auth/repository/task_remote_repository.dart';
 export 'package:nexa_sketch/features/auth/repository/trash_remote_repository.dart';
 
+export 'package:nexa_sketch/features/widgets/date_format.dart';
 export 'package:nexa_sketch/features/widgets/phone_format.dart';
 export 'package:nexa_sketch/features/widgets/point_image_widget.dart';
 export 'package:nexa_sketch/features/widgets/snackbar.dart';

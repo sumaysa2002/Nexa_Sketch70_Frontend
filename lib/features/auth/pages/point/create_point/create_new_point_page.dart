@@ -68,7 +68,7 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
   void point_date_Selected(DateTime day, DateTime focusedDay) {
     setState(() {
       point_date = day;
-      point_date_Controller.text = day.toString().split(" ")[0];
+      point_date_Controller.text = displayDate(day);
     });
   }
 
@@ -482,9 +482,7 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
         : null;
 
     // วันที่สำรวจ
-    final selectedDate = point_date_Controller.text.isNotEmpty
-        ? point_date_Controller.text
-        : point_date.toString().split(' ')[0];
+    final selectedDate = isoDate(point_date); // เก็บเป็น yyyy-MM-dd
 
     // ส่งข้อมูล
     context.read<PointTaskCubit>().createPoint(
@@ -1357,7 +1355,7 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
                                                 Expanded(
                                                   child: text_field_date_row(
                                                     name: "วันที่สำรวจ",
-                                                    hint_Text: point_date.toString().split(" ")[0],
+                                                    hint_Text: displayDate(point_date),
                                                     controller: point_date_Controller,
                                                   ),
                                                 ),

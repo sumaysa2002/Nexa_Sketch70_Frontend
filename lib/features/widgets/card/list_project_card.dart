@@ -23,7 +23,7 @@ class List_Project_Card extends StatelessWidget {
 
   // แปลงวันที่เป็น String
   String _formatDate(DateTime date) {
-    return date.toString().split(' ')[0]; // yyyy-MM-dd
+    return displayDate(date); // dd/MM/yyyy
   }
 
   @override

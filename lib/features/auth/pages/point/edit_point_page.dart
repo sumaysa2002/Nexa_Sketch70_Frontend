@@ -132,7 +132,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
     dcq_m_Controller           = TextEditingController(text: p.dcqM ?? '');
     tambon_Controller          = TextEditingController(text: p.tambon ?? '');
     amphoe_Controller          = TextEditingController(text: p.amphoe ?? '');
-    point_date_Controller      = TextEditingController(text: p.pointDate ?? '');
+    point_date_Controller      = TextEditingController(text: displayDate(p.pointDate, fallback: ''));
     job_Controller             = TextEditingController(text: p.job ?? '');
     gnss_Controller            = TextEditingController(text: p.gnss ?? '');
     rf_1_Controller            = TextEditingController(text: p.rf1 ?? '');
@@ -476,7 +476,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
   void _onDateSelected(DateTime day, DateTime _) {
     setState(() {
       point_date = day;
-      point_date_Controller.text = day.toString().split(' ')[0];
+      point_date_Controller.text = displayDate(day);
     });
   }
 
@@ -604,9 +604,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
         : null;
 
     // วันที่สำรวจ
-    final selectedDate = point_date_Controller.text.isNotEmpty
-        ? point_date_Controller.text
-        : point_date.toString().split(' ')[0];
+    final selectedDate = isoDate(point_date); // เก็บเป็น yyyy-MM-dd
 
     // ส่งข้อมูล
     context.read<PointTaskCubit>().updatePoint(
@@ -1724,7 +1722,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
                                                 Expanded(
                                                     child: text_field_date_row(
                                                       name: 'วันที่สำรวจ',
-                                                      hint_Text: point_date.toString().split(' ')[0],
+                                                      hint_Text: displayDate(point_date),
                                                       controller: point_date_Controller,
                                                     )
                                                 ),

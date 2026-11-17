@@ -496,7 +496,7 @@ class _Point_Detail_Viewer_PageState extends State<Point_Detail_Viewer_Page> {
                             icon: Icons.calendar_month,
                             color: Colors.red,
                             label: 'วันที่สำรวจ',
-                            value: '${_d(widget.point.pointDate)}',
+                            value: displayDate(widget.point.pointDate),
                           ),
                         ]
 
