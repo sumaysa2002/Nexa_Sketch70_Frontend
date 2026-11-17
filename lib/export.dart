@@ -47,6 +47,7 @@ export 'package:nexa_sketch/features/auth/cubit/point_task_cubit.dart';
 //export 'package:nexa_sketch/features/auth/cubit/point_task_state.dart';
 export 'package:nexa_sketch/features/auth/cubit/task_cubit.dart';
 //export 'package:nexa_sketch/features/auth/cubit/task_state.dart';
+export 'package:nexa_sketch/features/auth/cubit/trash_cubit.dart';
 
 // authentication --------------------
 export 'package:nexa_sketch/features/auth/pages/authentication/login/login_page.dart';
@@ -85,6 +86,12 @@ export 'package:nexa_sketch/features/auth/pages/project/editor/admin_project_det
 export 'package:nexa_sketch/features/auth/pages/project/editor/user_project_detail_editor_page.dart';
 export 'package:nexa_sketch/features/auth/pages/project/viewer/user_project_detail_viewer_page.dart';
 
+// [TRASH] ประวัติการลบ / กู้คืน
+export 'package:nexa_sketch/features/auth/pages/trash/deleted_projects_page.dart';
+export 'package:nexa_sketch/features/auth/pages/trash/deleted_project_detail_page.dart';
+export 'package:nexa_sketch/features/auth/pages/trash/deleted_point_page.dart';
+export 'package:nexa_sketch/features/auth/pages/trash/deleted_point_detail_page.dart';
+
 
 export 'package:nexa_sketch/features/auth/pages/approved_users/admin_approved_users_page.dart';
 export 'package:nexa_sketch/features/auth/pages/approved_users/nulluser_approved_users_page.dart';
@@ -96,11 +103,13 @@ export 'package:nexa_sketch/features/auth/repository/point_task_local_repository
 export 'package:nexa_sketch/features/auth/repository/point_task_remote_repository.dart';
 export 'package:nexa_sketch/features/auth/repository/task_local_repository.dart';
 export 'package:nexa_sketch/features/auth/repository/task_remote_repository.dart';
+export 'package:nexa_sketch/features/auth/repository/trash_remote_repository.dart';
 
 export 'package:nexa_sketch/features/widgets/phone_format.dart';
 export 'package:nexa_sketch/features/widgets/point_image_widget.dart';
 export 'package:nexa_sketch/features/widgets/snackbar.dart';
 export 'package:nexa_sketch/features/widgets/calender/calendar.dart';
+export 'package:nexa_sketch/features/widgets/trash_widget.dart';
 
 export "package:nexa_sketch/features/widgets/alert/alert_image_one_button.dart";
 export "package:nexa_sketch/features/widgets/alert/alert_image_two_button.dart";
@@ -158,8 +167,6 @@ export 'package:nexa_sketch/features/widgets/text/w_text_thai_notosansthai.dart'
 // models--------------------
 export 'package:nexa_sketch/models/point_model.dart';
 export 'package:nexa_sketch/models/project_model.dart';
+export 'package:nexa_sketch/models/trash_model.dart';
 export 'package:nexa_sketch/models/signup_payload.dart';
 export 'package:nexa_sketch/models/user_model.dart';
-
-
-

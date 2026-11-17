@@ -342,11 +342,28 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
 
                       const SizedBox(height: 15),
 
-                      _InfoRow(
-                        icon: Icons.calendar_today_rounded,
-                        color: Colors.grey,
-                        label: 'ช่วงการสำรวจ',
-                        value: '$startDate  -  $endDate',
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _InfoRow(
+                              icon: Icons.calendar_today_rounded,
+                              color: Colors.grey,
+                              label: 'ช่วงการสำรวจ',
+                              value: '$startDate  -  $endDate',
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          // ปุ่มประวัติการลบหมุดรังวัด
+                          _TrashHistoryButton(
+                            onPressed: () async {
+                              await Navigator.of(context).push(Deleted_Points_Page.route(_project));
+                              if (mounted) _loadPoints();
+                            },
+                          ),
+
+                        ],
                       ),
 
                     ],
@@ -624,6 +641,40 @@ class _InfoRow extends StatelessWidget {
         ),
 
       ],
+    );
+  }
+}
+
+
+/// ── ปุ่มประวัติการลบหมุดรังวัด ──────────────
+class _TrashHistoryButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _TrashHistoryButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.restore, size: 16, color: Colors.white),
+        label: const Text(
+          'ประวัติการลบหมุดรังวัด',
+          style: TextStyle(
+            fontSize: 13,
+            fontFamily: 'NotoSansThai',
+            color: Colors.white,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFBDBDBD),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+        ),
+      ),
     );
   }
 }

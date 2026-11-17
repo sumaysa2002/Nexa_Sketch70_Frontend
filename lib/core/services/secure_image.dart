@@ -16,8 +16,10 @@ class SecureImage {
       _token == null ? const {} : {'x-auth-token': _token!};
 
   /// URL รูปของหมุดรังวัด >> GET /points/image/:project_id/:point_id/:filename
-  static String pointUrl(int projectId, int pointId, String filename) =>
-      '${Constants.backendUri}/points/image/$projectId/$pointId/${Uri.encodeComponent(filename)}';
+  /// includeDeleted = true >> รูปของหมุด/โครงการในประวัติการลบ [TRASH]
+  static String pointUrl(int projectId, int pointId, String filename, {bool includeDeleted = false}) =>
+      '${Constants.backendUri}/points/image/$projectId/$pointId/${Uri.encodeComponent(filename)}'
+          '${includeDeleted ? '?include_deleted=1' : ''}';
 
   /// URL รูปโปรไฟล์ >> GET /auth/image/profile/:filename
   static String profileUrl(String? filename) =>

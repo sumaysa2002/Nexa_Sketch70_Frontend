@@ -7,6 +7,7 @@ class List_Project_Card extends StatelessWidget {
   final DateTime endDate;
   final List<String> provinces;
   final VoidCallback? onTap;
+  final Widget? footer; // [TRASH] ส่วนท้ายการ์ด
 
   const List_Project_Card({
     required this.userRole,
@@ -15,6 +16,7 @@ class List_Project_Card extends StatelessWidget {
     required this.endDate,
     required this.provinces,
     this.onTap,
+    this.footer,
 
     Key? key,
   }) : super(key: key);
@@ -27,7 +29,7 @@ class List_Project_Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+        onTap: onTap,
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           padding: const EdgeInsets.all(1.5), // ความหนาของขอบ
@@ -177,6 +179,14 @@ class List_Project_Card extends StatelessWidget {
                         value: '${_formatDate(startDate)}  -  ${_formatDate(endDate)}',
                       ),
 
+                      // [TRASH] ส่วนท้ายการ์ด
+                      if (footer != null) ...[
+                        const SizedBox(height: 15),
+                        const Divider(height: 1),
+                        const SizedBox(height: 15),
+                        footer!,
+                      ],
+
                     ],
                   ),
                 ),
@@ -221,9 +231,9 @@ class _InfoRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
-            icon,
-            color: Colors.black54,
-            size: 18
+              icon,
+              color: Colors.black54,
+              size: 18
           ),
         ),
 

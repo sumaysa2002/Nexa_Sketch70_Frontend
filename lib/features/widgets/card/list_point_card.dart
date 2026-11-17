@@ -3,10 +3,14 @@ import 'package:nexa_sketch/export.dart';
 class List_Point_Card extends StatelessWidget {
   final PointModel point;
   final VoidCallback? onTap;
+  final bool fromTrash; // หมุดในประวัติการลบ
+  final Widget? footer; // [TRASH] ส่วนท้ายการ์ด
 
   const List_Point_Card({
     required this.point,
     this.onTap,
+    this.fromTrash = false,
+    this.footer,
     Key? key,
   }) : super(key: key);
 
@@ -145,7 +149,7 @@ class List_Point_Card extends StatelessWidget {
                           errorBuilder: (_, __, ___) => _placeholder(),
                         )
                             : Image.network(
-                          SecureImage.pointUrl(point.projectId, point.id, img),
+                          SecureImage.pointUrl(point.projectId, point.id, img, includeDeleted: fromTrash),
                           headers: SecureImage.headers(context),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _placeholder(),
@@ -156,6 +160,14 @@ class List_Point_Card extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // [TRASH] ส่วนท้ายการ์ด
+              if (footer != null) ...[
+                const SizedBox(height: 15),
+                const Divider(height: 1),
+                const SizedBox(height: 15),
+                footer!,
+              ],
             ],
           ),
         ),

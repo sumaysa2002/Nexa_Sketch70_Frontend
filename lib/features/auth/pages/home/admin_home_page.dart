@@ -224,39 +224,83 @@ class _Admin_Home_PageState extends State<Admin_Home_Page> {
                                             mainAxisAlignment: MainAxisAlignment.start,
                                             children: [
 
-                                              /// ค้นหา
                                               Padding(
                                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                                                child: TextField(
-                                                  controller: _searchController,
-                                                  onChanged: (value) {
-                                                    setState(() {
-                                                      _searchQuery = value.toLowerCase();
-                                                    });
-                                                  },
-                                                  style: const TextStyle(
-                                                    fontFamily: 'NotoSansThai',
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: Color(0xFF18181C),
-                                                  ),
-                                                  decoration: InputDecoration(
-                                                    hintText: "ค้นหาชื่อโครงการ",
-                                                    hintStyle: const TextStyle(
-                                                      fontFamily: 'NotoSansThai',
-                                                      fontSize: 14,
-                                                      color: Colors.grey,
+                                                child: Row(
+                                                  children: [
+
+                                                    /// ค้นหา
+                                                    Expanded(
+                                                      child: TextField(
+                                                        controller: _searchController,
+                                                        onChanged: (value) {
+                                                          setState(() {
+                                                            _searchQuery = value.toLowerCase();
+                                                          });
+                                                        },
+                                                        style: const TextStyle(
+                                                          fontFamily: 'NotoSansThai',
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight.w500,
+                                                          color: Color(0xFF18181C),
+                                                        ),
+                                                        decoration: InputDecoration(
+                                                          hintText: "ค้นหาชื่อโครงการ",
+                                                          hintStyle: const TextStyle(
+                                                            fontFamily: 'NotoSansThai',
+                                                            fontSize: 14,
+                                                            color: Colors.grey,
+                                                          ),
+                                                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                                                          filled: true,
+                                                          fillColor: Colors.grey.shade100,
+                                                          contentPadding: const EdgeInsets.symmetric(
+                                                              horizontal: 16, vertical: 10),
+                                                          border: OutlineInputBorder(
+                                                            borderRadius: BorderRadius.circular(50),
+                                                            borderSide: BorderSide.none,
+                                                          ),
+                                                        ),
+                                                      ),
                                                     ),
-                                                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                                                    filled: true,
-                                                    fillColor: Colors.grey.shade100,
-                                                    contentPadding: const EdgeInsets.symmetric(
-                                                        horizontal: 16, vertical: 10),
-                                                    border: OutlineInputBorder(
-                                                      borderRadius: BorderRadius.circular(50),
-                                                      borderSide: BorderSide.none,
+
+                                                    const SizedBox(width: 10),
+
+                                                    /// ประวัติการลบโครงการ
+                                                    SizedBox(
+                                                      height: 50,
+                                                      child: ElevatedButton.icon(
+                                                        onPressed: () async {
+                                                          await Navigator.of(context).push(Deleted_Projects_Page.route());
+                                                          if (!mounted) return;
+                                                          final authState = context.read<AuthCubit>().state;
+                                                          if (authState is AuthLoggedIn) {
+                                                            context.read<TaskCubit>().getAllProjects(token: authState.userModel.token);
+                                                          }
+                                                        },
+                                                        icon: const Icon(
+                                                            Icons.restore,
+                                                            size: 18,
+                                                            color: Colors.white
+                                                        ),
+                                                        label: const Text(
+                                                          "ประวัติการลบโครงการ",
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            fontFamily: 'NotoSansThai',
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: const Color(0xFF18181C),
+                                                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(50),
+                                                          ),
+                                                        ),
+                                                      ),
                                                     ),
-                                                  ),
+                                                  ],
                                                 ),
                                               ),
 
