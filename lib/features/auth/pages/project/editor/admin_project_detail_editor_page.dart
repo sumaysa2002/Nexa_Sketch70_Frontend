@@ -326,6 +326,8 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
 
                       w_text_thai_notosansthai(
                         name: pj.projectName,
+                        maxLines: 5,
+                        overflow: TextOverflow.ellipsis,
                         font_Size: 18,
                         fontWeight: FontWeight.w700,
                       ),
@@ -337,7 +339,7 @@ class _Admin_Project_Detail_Editor_PageState extends State<Admin_Project_Detail_
                         color: Colors.grey,
                         label: 'พื้นที่โครงการ',
                         value: provinces.isEmpty ? '-' : provinces.join(', '),
-                        maxLines: 5,
+                        maxLines: 2,
                       ),
 
                       const SizedBox(height: 15),

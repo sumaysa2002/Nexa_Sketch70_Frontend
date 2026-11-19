@@ -10,6 +10,8 @@ class text_field_column_c5 extends StatefulWidget {
   final TextInputType keyboardType;
   final bool isPassword;
   final List<TextInputFormatter>? inputFormatters;
+  final int? maxLines;
+  final int minLines;
 
   const text_field_column_c5({
     required this.name,
@@ -19,6 +21,8 @@ class text_field_column_c5 extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.isPassword = false,
     this.inputFormatters,
+    this.maxLines = 1,
+    this.minLines = 1,
     super.key,
   });
 
@@ -52,6 +56,9 @@ class _text_field_column_c5State extends State<text_field_column_c5> {
           validator: widget.validator,
           keyboardType: widget.keyboardType,
           inputFormatters: widget.inputFormatters,
+          // ช่องรหัสผ่านต้องบรรทัดเดียวเสมอ
+          maxLines: widget.isPassword ? 1 : widget.maxLines,
+          minLines: widget.isPassword ? 1 : widget.minLines,
           obscureText: widget.isPassword ? _obscureText : false,
 
           style: const TextStyle(

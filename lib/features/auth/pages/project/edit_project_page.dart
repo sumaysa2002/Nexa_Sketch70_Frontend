@@ -796,6 +796,7 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
                                   children: [
 
                                     Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         SizedBox(
                                           width: 120,
@@ -817,6 +818,7 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
                                             name: "ชื่อโครงการ",
                                             controller: project_name_Controller,
                                             hintText: "Name",
+                                            maxLines: null,
                                             validator: (value) {
                                               if (value == null || value.isEmpty) {
                                                 return 'กรุณาระบุชื่อโครงการ';
@@ -834,6 +836,9 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
                                       name: "รายละเอียดโครงการ",
                                       controller: project_details_Controller,
                                       hintText: "รายละเอียดโครงการ",
+                                      keyboardType: TextInputType.multiline,
+                                      maxLines: null,
+                                      minLines: 3,
                                       validator: (value) {
 
                                       },
@@ -987,6 +992,9 @@ class _Edit_Project_PageState extends State<Edit_Project_Page> {
                                       name: "หมายเหตุเพิ่มเติม",
                                       controller: project_note_Controller,
                                       hintText: "-",
+                                      keyboardType: TextInputType.multiline,
+                                      maxLines: null,
+                                      minLines: 3,
                                       validator: (value) {},
                                     ),
 

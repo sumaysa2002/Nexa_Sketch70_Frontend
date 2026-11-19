@@ -238,6 +238,8 @@ class _User_Project_Detail_Editor_PageState extends State<User_Project_Detail_Ed
 
                     w_text_thai_notosansthai(
                         name: pj.projectName,
+                        maxLines: 5,
+                        overflow: TextOverflow.ellipsis,
                         font_Size: 18,
                         fontWeight: FontWeight.w700
                     ),
@@ -249,7 +251,7 @@ class _User_Project_Detail_Editor_PageState extends State<User_Project_Detail_Ed
                       color: Colors.grey,
                       label: 'พื้นที่โครงการ',
                       value: provinces.isEmpty ? '-' : provinces.join(', '),
-                      maxLines: 5,
+                      maxLines: 2,
                     ),
 
                     const SizedBox(height: 15),

@@ -9,6 +9,8 @@ class w_text_thai_notosansthai extends StatelessWidget {
   final double shadowwithOpacity;
   final double offset;
   final double blurRadius;
+  final int? maxLines;
+  final TextOverflow? overflow;
 
   const w_text_thai_notosansthai({
     required this.name,
@@ -19,26 +21,30 @@ class w_text_thai_notosansthai extends StatelessWidget {
     this.shadowwithOpacity = 0.2,
     this.offset = 1,
     this.blurRadius = 2,
+    this.maxLines,
+    this.overflow,
     Key? key,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Text(
-        name,
-        style: TextStyle(
-          fontSize: font_Size,
-          color: color,
-          fontFamily: 'NotoSansThai',
-          fontWeight: fontWeight,
-          shadows: [
-            Shadow(
-              color: shadow_color.withOpacity(shadowwithOpacity),
-              offset: Offset(offset, offset),
-              blurRadius: blurRadius,
-            ),
-          ],
-        )
+      name,
+      style: TextStyle(
+        fontSize: font_Size,
+        color: color,
+        fontFamily: 'NotoSansThai',
+        fontWeight: fontWeight,
+        shadows: [
+          Shadow(
+            color: shadow_color.withOpacity(shadowwithOpacity),
+            offset: Offset(offset, offset),
+            blurRadius: blurRadius,
+          ),
+        ],
+      ),
+      maxLines: maxLines,
+      overflow: overflow,
     );
   }
 }
