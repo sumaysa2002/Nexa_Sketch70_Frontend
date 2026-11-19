@@ -24,8 +24,8 @@ final List<String> stickerPaths = [
 ];
 
 final List<String> drawIconPaths = [
-  'assets/images/draw_icon/1_RF1.PNG',
-  'assets/images/draw_icon/2_RF2.PNG',
+  'assets/images/draw_icon/1_RF1.png',
+  'assets/images/draw_icon/2_RF2.png',
   'assets/images/draw_icon/3_Mark.png',
   'assets/images/draw_icon/4_Flag.png',
   'assets/images/draw_icon/5_School.png',

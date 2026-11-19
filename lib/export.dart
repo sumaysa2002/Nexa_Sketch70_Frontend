@@ -38,6 +38,7 @@ export 'package:nexa_sketch/core/services/secure_image.dart';
 export 'package:nexa_sketch/core/services/sp_service.dart';
 export 'package:nexa_sketch/core/services/sync_service.dart';
 export 'package:nexa_sketch/core/services/thai_address_service.dart';
+export 'package:nexa_sketch/core/services/utm_to_latlng.dart';
 
 // features--------------------
 export 'package:nexa_sketch/features/auth/bloc/bottom_nav_cubit.dart';

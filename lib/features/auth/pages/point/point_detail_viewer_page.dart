@@ -338,6 +338,11 @@ class _Point_Detail_Viewer_PageState extends State<Point_Detail_Viewer_Page> {
                             ),
                           ],
                         ),
+
+                        const Divider(height: 20),
+
+                        /// Google Maps
+                        Open_In_Map_Button(point: widget.point),
                       ],
 
                     ),

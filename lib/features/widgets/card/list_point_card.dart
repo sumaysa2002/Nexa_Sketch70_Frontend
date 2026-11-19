@@ -116,15 +116,15 @@ class List_Point_Card extends StatelessWidget {
               const SizedBox(height: 8),
 
               /// COORDINATE
-              _InfoRow(label: 'N :', value: _orDash(point.northing)),
-              _InfoRow(label: 'E :', value: _orDash(point.easting)),
+              _InfoRow(label: 'Northing', value: _orDash("${point.northing} m.")),
+              _InfoRow(label: 'Easting', value: _orDash("${point.easting} m.")),
 
               const SizedBox(height: 8),
 
               /// LOCATION
-              _InfoRow(label: 'ตำบล :', value: _orDash(point.tambon)),
-              _InfoRow(label: 'อำเภอ :', value: _orDash(point.amphoe)),
-              _InfoRow(label: 'จังหวัด :', value: _orDash(point.province)),
+              _InfoRow(label: 'ตำบล', value: _orDash(point.tambon)),
+              _InfoRow(label: 'อำเภอ', value: _orDash(point.amphoe)),
+              _InfoRow(label: 'จังหวัด', value: _orDash(point.province)),
 
               const SizedBox(height: 5),
 
@@ -201,7 +201,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 55,
+            width: 62,
             child: Text(
               label,
               style: TextStyle(
@@ -212,6 +212,21 @@ class _InfoRow extends StatelessWidget {
               ),
             ),
           ),
+
+          SizedBox(
+            child: Text(
+              ":",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF707078),
+                fontWeight: FontWeight.w600,
+                fontFamily: 'NotoSansThai',
+              ),
+            ),
+          ),
+
+          SizedBox(width: 20),
+
           Expanded(
             child: Text(
               value,
