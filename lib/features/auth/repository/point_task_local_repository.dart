@@ -49,9 +49,6 @@ class PointTaskLocalRepository {
             draw_data_json        TEXT,
             details_img           TEXT,
             details_data_json     TEXT,
-            
-            draw_description_img  TEXT,
-            
             job                   TEXT,
             gnss                  TEXT,
             rf_1                  TEXT,
@@ -418,9 +415,6 @@ class PointTaskLocalRepository {
       'draw_data_json':       p.drawDataJson,
       'details_img':          p.detailsImg,
       'details_data_json':    p.detailsDataJson,
-
-      'draw_description_img': p.drawDescriptionImg,
-
       'job':                  p.job,
       'gnss':                 p.gnss,
       'rf_1':                 p.rf1,
@@ -473,9 +467,6 @@ class PointTaskLocalRepository {
       drawDataJson:         map['draw_data_json'] as String?,
       detailsImg:           map['details_img'] as String?,
       detailsDataJson:      map['details_data_json'] as String?,
-
-      drawDescriptionImg:   map['draw_description_img'] as String?,
-
       job:                  map['job'] as String?,
       gnss:                 map['gnss'] as String?,
       rf1:                  map['rf_1'] as String?,
@@ -547,7 +538,6 @@ class PointTaskLocalRepository {
       print("point_zoomout_img:     ${row['point_zoomout_img']}");
       print("draw_img:              ${row['draw_img']}");
       print("details_img:           ${row['details_img']}");
-      print("draw_description_img:  ${row['draw_description_img']}");
       print("job:                   ${row['job']}");
       print("gnss:                  ${row['gnss']}");
       print("rf_1:                  ${row['rf_1']}");

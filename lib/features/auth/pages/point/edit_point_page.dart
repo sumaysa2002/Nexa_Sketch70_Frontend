@@ -76,7 +76,6 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
   late DateTime point_date;
 
   // รูปภาพ
-  Uint8List? draw_description_img;
   Uint8List? point_zoomin_img;
   Uint8List? point_zoomout_img;
   Uint8List? point_survey_img;
@@ -639,8 +638,6 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
       drawDataJson:       drawDataJsonToSend,
       detailsImg:         noteImgBytes,
       detailsDataJson:    detailsDataJsonToSend,
-
-      drawDescriptionImg: draw_description_img,
 
       pointSurveyImg:     point_survey_img,
       pointControllerImg: point_controller_img,
@@ -1399,7 +1396,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
                                                   point_dropdown_field_column_c30(
                                                       name: 'Datum',
                                                       value: datum,
-                                                      items: ['Indian 1975', 'WGS84'],
+                                                      items: ['WGS84', 'Indian 1975'],
                                                       onChanged: (v) => setState(() => datum = v),
                                                       unitWidth: 0
                                                   ),
@@ -1415,7 +1412,7 @@ class _Edit_Point_PageState extends State<Edit_Point_Page> {
                                                   point_dropdown_field_column_c30(
                                                       name: 'EGM',
                                                       value: egm,
-                                                      items: ['EGM96', 'EGM2008', 'TGM2017', 'EGM2020', 'GOCO2025s'],
+                                                      items: ['GOCO2025s', 'EGM2020', 'TGM2017', 'EGM2008', 'EGM96'],
                                                       onChanged: (v) => setState(() => egm   = v),
                                                       unitWidth: 0
                                                   ),

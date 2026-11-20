@@ -232,7 +232,6 @@ class Export_Project {
         _loadImage(_imgUrl(p, p.wSurveyImg),          token), // 7
         _loadImage(_imgUrl(p, p.drawImg),             token), // 8
         _loadImage(_imgUrl(p, p.detailsImg),          token), // 9
-        _loadImage(_imgUrl(p, p.drawDescriptionImg),  token), // 10
       ]);
 
       final imgZoomIn      = imgResults[0];
@@ -245,7 +244,6 @@ class Export_Project {
       final imgW           = imgResults[7];
       final imgDraw        = imgResults[8];
       final imgDetails     = imgResults[9];
-      final ImgDrawDescription     = imgResults[10];
 
       // โหลดข้อมูล ผู้รังวัด / ผู้ตรวจสอบ
       final techUser = _findUser(usersById, p.surveyTechnician);

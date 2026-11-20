@@ -49,8 +49,6 @@ class PointModel {
   final String? detailsImg;
   final String? detailsDataJson;
 
-  final String? drawDescriptionImg;
-
   // JOB
   final String? job;
   final String? gnss;
@@ -112,9 +110,6 @@ class PointModel {
     this.drawDataJson,
     this.detailsImg,
     this.detailsDataJson,
-
-    this.drawDescriptionImg,
-
     this.job,
     this.gnss,
     this.rf1,
@@ -171,8 +166,6 @@ class PointModel {
     String? drawDataJson,
     String? detailsImg,
     String? detailsDataJson,
-
-    String? drawDescriptionImg,
 
     String? job,
     String? gnss,
@@ -248,8 +241,6 @@ class PointModel {
       detailsImg: detailsImg ?? this.detailsImg,
       detailsDataJson: detailsDataJson ?? this.detailsDataJson,
 
-      drawDescriptionImg: drawDescriptionImg ?? this.drawDescriptionImg,
-
       job: job ?? this.job,
       gnss: gnss ?? this.gnss,
       rf1: rf1 ?? this.rf1,
@@ -305,8 +296,6 @@ class PointModel {
       drawDataJson:         json['draw_data_json'] as String?,
       detailsImg:           json['details_img'] as String?,
       detailsDataJson:      json['details_data_json'] as String?,
-
-      drawDescriptionImg:   json['draw_description_img'] as String?,
 
       job:                  json['job'] as String?,
       gnss:                 json['gnss'] as String?,
@@ -367,8 +356,6 @@ class PointModel {
     'draw_data_json':       drawDataJson,
     'details_img':          detailsImg,
     'details_data_json':    detailsDataJson,
-
-    'draw_description_img': drawDescriptionImg,
 
     'job':                  job,
     'gnss':                 gnss,

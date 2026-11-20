@@ -87,7 +87,6 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
   final az_2_Controller = TextEditingController();
 
   // รูปถ่ายประกอบ
-  Uint8List? draw_description_img;
   Uint8List? point_survey_img;
   Uint8List? point_controller_img;
   Uint8List? n_survey_img;
@@ -519,8 +518,6 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
       drawDataJson:       drawDataJson,
       detailsImg:         noteImgBytes,
       detailsDataJson:    detailsDataJson,
-
-      drawDescriptionImg: draw_description_img,
 
       job:                _nullIfEmpty(job_Controller.text),
       gnss:               _nullIfEmpty(gnss_Controller.text),
@@ -988,7 +985,7 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
                                                   point_dropdown_field_column_c30(
                                                       name: 'Datum',
                                                       value: datum,
-                                                      items: ['Indian 1975', 'WGS84'],
+                                                      items: ['WGS84', 'Indian 1975'],
                                                       onChanged: (val) {
                                                         setState(() {
                                                           datum = val;
@@ -1012,7 +1009,7 @@ class _CreateNewPoint_PageState extends State<CreateNewPoint_Page> {
                                                   point_dropdown_field_column_c30(
                                                       name: 'Earth Gravitational Model (EGM)',
                                                       value: egm,
-                                                      items: ['EGM96', 'EGM2008', 'TGM2017', 'EGM2020', 'GOCO2025s'],
+                                                      items: ['GOCO2025s', 'EGM2020', 'TGM2017', 'EGM2008', 'EGM96'],
                                                       onChanged: (val) {
                                                         setState(() {
                                                           egm = val;

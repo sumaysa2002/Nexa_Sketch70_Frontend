@@ -84,7 +84,6 @@ class PointTaskRemoteRepository {
       'point_zoomout_img': await read(p.pointZoomoutImg),
       'draw_img': await read(p.drawImg),
       'details_img': await read(p.detailsImg),
-      'draw_description_img': await read(p.drawDescriptionImg),
       'point_survey_img': await read(p.pointSurveyImg),
       'point_controller_img': await read(p.pointControllerImg),
       'n_survey_img': await read(p.nSurveyImg),
@@ -139,8 +138,6 @@ class PointTaskRemoteRepository {
     String? drawDataJson,
     Uint8List? detailsImg,
     String? detailsDataJson,
-
-    Uint8List? drawDescriptionImg,
 
     // JOB
     String? job,
@@ -239,7 +236,6 @@ class PointTaskRemoteRepository {
       addImage('point_zoomout_img', pointZoomoutImg);
       addImage('draw_img', drawImg);
       addImage('details_img', detailsImg);
-      addImage('draw_description_img', drawDescriptionImg);
       addImage('point_survey_img', pointSurveyImg);
       addImage('point_controller_img', pointControllerImg);
       addImage('n_survey_img', nSurveyImg);
@@ -284,7 +280,6 @@ class PointTaskRemoteRepository {
             'point_zoomout_img': pointZoomoutImg,
             'draw_img': drawImg,
             'details_img': detailsImg,
-            'draw_description_img': drawDescriptionImg,
             'point_survey_img': pointSurveyImg,
             'point_controller_img': pointControllerImg,
             'n_survey_img': nSurveyImg,
@@ -324,8 +319,6 @@ class PointTaskRemoteRepository {
           drawDataJson: drawDataJson,
           detailsImg: savedPaths['details_img'],
           detailsDataJson: detailsDataJson,
-
-          drawDescriptionImg: savedPaths['draw_description_img'],
 
           job: job,
           gnss: gnss,
@@ -427,9 +420,6 @@ class PointTaskRemoteRepository {
     String? drawDataJson,
     Uint8List? detailsImg,
     String? detailsDataJson,
-
-    Uint8List? drawDescriptionImg,
-
     String? job,
     String? gnss,
     String? rf1,
@@ -484,8 +474,6 @@ class PointTaskRemoteRepository {
         detailsImg: detailsImg,
         detailsDataJson: detailsDataJson,
 
-        drawDescriptionImg: drawDescriptionImg,
-
         job: job,
         gnss: gnss,
         rf1: rf1,
@@ -531,7 +519,6 @@ class PointTaskRemoteRepository {
             'point_zoomout_img': pointZoomoutImg,
             'draw_img': drawImg,
             'details_img': detailsImg,
-            'draw_description_img': drawDescriptionImg,
             'point_survey_img': pointSurveyImg,
             'point_controller_img': pointControllerImg,
             'n_survey_img': nSurveyImg,
@@ -568,8 +555,6 @@ class PointTaskRemoteRepository {
           drawDataJson: drawDataJson,
           detailsImg: savedPaths['details_img'],
           detailsDataJson: detailsDataJson,
-
-          drawDescriptionImg: savedPaths['draw_description_img'],
 
           job: job,
           gnss: gnss,
@@ -687,8 +672,6 @@ class PointTaskRemoteRepository {
           detailsImg: images['details_img'],
           detailsDataJson: p.detailsDataJson,
 
-          drawDescriptionImg: images['draw_description_img'],
-
           job: p.job,
           gnss: p.gnss,
           rf1: p.rf1,
@@ -780,8 +763,6 @@ class PointTaskRemoteRepository {
           drawDataJson: p.drawDataJson,
           detailsImg: images['details_img'],
           detailsDataJson: p.detailsDataJson,
-
-          drawDescriptionImg: images['draw_description_img'],
 
           job: p.job,
           gnss: p.gnss,
@@ -882,8 +863,6 @@ class PointTaskRemoteRepository {
     Uint8List? detailsImg,
     String? detailsDataJson,
 
-    Uint8List? drawDescriptionImg,
-
     // JOB
     String? job,
     String? gnss,
@@ -973,7 +952,6 @@ class PointTaskRemoteRepository {
     addImage('point_zoomout_img', pointZoomoutImg);
     addImage('draw_img', drawImg);
     addImage('details_img', detailsImg);
-    addImage('draw_description_img', drawDescriptionImg);
     addImage('point_survey_img', pointSurveyImg);
     addImage('point_controller_img', pointControllerImg);
     addImage('n_survey_img', nSurveyImg);
@@ -1019,9 +997,6 @@ class PointTaskRemoteRepository {
     String? drawDataJson,
     Uint8List? detailsImg,
     String? detailsDataJson,
-
-    Uint8List? drawDescriptionImg,
-
     String? job,
     String? gnss,
     String? rf1,
@@ -1114,7 +1089,6 @@ class PointTaskRemoteRepository {
     addImage('point_zoomout_img', pointZoomoutImg);
     addImage('draw_img', drawImg);
     addImage('details_img', detailsImg);
-    addImage('draw_description_img', drawDescriptionImg);
     addImage('point_survey_img', pointSurveyImg);
     addImage('point_controller_img', pointControllerImg);
     addImage('n_survey_img', nSurveyImg);

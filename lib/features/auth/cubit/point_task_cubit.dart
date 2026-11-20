@@ -50,8 +50,6 @@ class PointTaskCubit extends Cubit<PointTaskState> {
     Uint8List? detailsImg,
     String? detailsDataJson,
 
-    Uint8List? drawDescriptionImg,
-
     String? job,
     String? gnss,
     String? rf1,
@@ -105,8 +103,6 @@ class PointTaskCubit extends Cubit<PointTaskState> {
           drawDataJson: drawDataJson,
           detailsImg: detailsImg,
           detailsDataJson: detailsDataJson,
-
-          drawDescriptionImg: drawDescriptionImg,
 
           job:                 job,
           gnss:                gnss,
@@ -181,8 +177,6 @@ class PointTaskCubit extends Cubit<PointTaskState> {
     Uint8List? detailsImg,
     String? detailsDataJson,
 
-    Uint8List? drawDescriptionImg,
-
     String? job,
     String? gnss,
     String? rf1,
@@ -234,8 +228,6 @@ class PointTaskCubit extends Cubit<PointTaskState> {
         drawDataJson: drawDataJson,
         detailsImg: detailsImg,
         detailsDataJson: detailsDataJson,
-
-        drawDescriptionImg: drawDescriptionImg,
 
         job: job,
         gnss: gnss,
